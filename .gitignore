@@ -8,3 +8,5 @@ __pycache__/
 *.a
 .DS_Store
 CalcFiles/
+.venv/
+.codex
