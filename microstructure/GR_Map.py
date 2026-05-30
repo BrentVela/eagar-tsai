@@ -31,19 +31,17 @@ def _plot_overlay_points(ax, overlay_csv, label=None, point_kwargs=None):
 
     r_col = "R_x" if "R_x" in overlay_df.columns else "R"
     r_values = overlay_df[r_col].to_numpy(dtype=float)
-    # The heatmap coordinates are in microns, so G is in K/um here.
-    # Convert to K/m to match the GR map axes.
-    g_values = overlay_df["G"].to_numpy(dtype=float) * 1.0e6
+    g_values = overlay_df["G"].to_numpy(dtype=float)
 
     mask = np.isfinite(r_values) & np.isfinite(g_values) & (r_values > 0) & (g_values > 0)
     if not np.any(mask):
         raise ValueError(f"No plottable overlay points found in {overlay_csv}.")
 
     kwargs = {
-        "s": 18,
+        "s": 4,
         "c": "gold",
-        "edgecolors": "black",
-        "linewidths": 0.35,
+        "edgecolors": "none",
+        "alpha": 0.35,
         "marker": "o",
         "zorder": 5,
     }
@@ -64,8 +62,8 @@ def _load_alloy_from_excel(excel_path, row_index, element_cols):
     elements = {el: float(row[el]) for el in element_cols if el in df.columns}
     if not elements:
         raise ValueError(f"No element columns found in {excel_path}. Expected one of: {element_cols}")
-    # Convert mass fraction to mass percent (TC-Python expects MASS_PERCENT).
-    elements = {el: val * 100.0 for el, val in elements.items() if not pd.isna(val)}
+    # Spreadsheet composition columns are mole/atomic fractions that sum to 1.
+    elements = {el: val for el, val in elements.items() if not pd.isna(val)}
     elements = {key: v for key, v in sorted(elements.items(), key=lambda item: item[1], reverse=True)}
     dependent_element = list(elements.keys())[0]
     solutes = elements.copy()
@@ -73,22 +71,23 @@ def _load_alloy_from_excel(excel_path, row_index, element_cols):
     return elements, solutes
 
 
-def get_CET_grid(system, solutes, primary_phase="BCC_B2", interfacial_energy=0.5, nb_nucleations_site=2e15, nucleation_undercooling=2.5, equiaxed_exponent=3.4, disable_output = True):
+def get_CET_grid(system, solutes, primary_phase="BCC_B2", interfacial_energy=0.5, nb_nucleations_site=2e15, nucleation_undercooling=2.5, equiaxed_exponent=3.4, disable_output = True, composition_unit=CompositionUnit.MOLE_FRACTION):
     calc = system.with_property_model_calculation("CETPythonModel")
     if not disable_output:
         print('Calculator arguments:', list(calc.get_arguments()))
-    calc.set_composition_unit(CompositionUnit.MASS_PERCENT)
+    calc.set_composition_unit(composition_unit)
 
     for element in solutes:
         calc.set_composition(element, solutes[element])
 
-    logv_list = np.linspace(-6, 0, 50)
-    logG_list = np.linspace(4, 9, 50)
+    logv_list = np.linspace(-7, 1, 50)
+    logG_list = np.linspace(3, 10, 50)
     v = []
     G = []
     EF = []
     TR = []
     DTU = []
+    nan_points = []
     calc.set_argument("primaryPhase", primary_phase)
     calc.set_argument("InterfacialEnergy", str(interfacial_energy))
     calc.set_argument("NbNucleationSites", str(nb_nucleations_site))
@@ -114,6 +113,7 @@ def get_CET_grid(system, solutes, primary_phase="BCC_B2", interfacial_energy=0.5
 
             # if the last G value outputted a nan value (found the planar region) we can break out of the loop and go to the next v value
             if math.isnan(equiaxed_fraction):
+                nan_points.append((10 ** logv, 10 ** logG))
                 if not disable_output:
                     print("Found planar region. Moving to next set of solidification rates.")
 
@@ -124,21 +124,34 @@ def get_CET_grid(system, solutes, primary_phase="BCC_B2", interfacial_energy=0.5
                     DTU.append(float('nan'))
                     v.append(10 ** logv)
                     G.append(10 ** logG)
+                    nan_points.append((10 ** logv, 10 ** logG))
                 break
-    return v, G, EF, TR, DTU
+    return v, G, EF, TR, DTU, nan_points
 
-def get_CET_lines(system, g_range, solutes, primary_phase="BCC_B2", interfacial_energy=0.5, nb_nucleations_site=2e15, nucleation_undercooling=2.5, equiaxed_exponent=3.4, disable_output = True):
+def get_CET_lines(
+    system,
+    g_range,
+    solutes,
+    primary_phase="BCC_B2",
+    interfacial_energy=0.5,
+    nb_nucleations_site=2e15,
+    nucleation_undercooling=2.5,
+    equiaxed_exponent=3.4,
+    disable_output=True,
+    composition_unit=CompositionUnit.MOLE_FRACTION,
+    r_range=(-7, 1),
+    r_count=50,
+):
     # Interfacial energy Universal interatomic machine learning potentials
     calc = system.with_property_model_calculation("CETPythonModel")
     if not disable_output:
         print('Calculator arguments:', list(calc.get_arguments()))
-    calc.set_composition_unit(CompositionUnit.MASS_PERCENT)
+    calc.set_composition_unit(composition_unit)
 
     for element in solutes:
         calc.set_composition(element, solutes[element])
 
-    logv_list = np.linspace(-6, 0, 50)
-    logG_list = np.linspace(g_range[0], g_range[1], 50)
+    logv_list = np.linspace(r_range[0], r_range[1], r_count)
     v = []
     G = [[],[],[],[]]
     calc.set_argument("primaryPhase", primary_phase)
@@ -151,18 +164,15 @@ def get_CET_lines(system, g_range, solutes, primary_phase="BCC_B2", interfacial_
     calc.set_argument("Equiaxed fractions", "0.001 0.99")
 
     for logv in logv_list:
-        for logG in logG_list:
-            calc.set_argument("Log10(v)", logv)
-            #calc.set_argument("TemperatureGradient", 10 ** logG)
+        calc.set_argument("Log10(v)", logv)
+        result = calc.calculate()
+        equiaxed_fraction = result.get_value_of("Thermal gradient")
+        G[0].append(equiaxed_fraction["Equiaxed fraction=0.001"])
+        G[1].append(equiaxed_fraction["Equiaxed fraction=0.99"])
+        G[2].append(equiaxed_fraction["Planar front"])
+        v.append(10 ** logv)
 
-            result = calc.calculate()
-            equiaxed_fraction = result.get_value_of("Thermal gradient")
-            G[0].append(equiaxed_fraction["Equiaxed fraction=0.001"])
-            G[1].append(equiaxed_fraction["Equiaxed fraction=0.99"])
-            G[2].append(equiaxed_fraction["Planar front"])
-            v.append(10 ** logv)
-
-    return G
+    return v, G
 
 # Basic code to generate G-V map. Adjusts lower v bound to capture the start of the planar line.
 def adaptive_CET_grid(filename, thermodynamic_database, kinetic_database, g_range, show_plot = False, disable_cache = False):
@@ -327,7 +337,7 @@ def request_GR_Grid_from_excel(
             thermodynamic_database, kinetic_database, list(elements.keys())
         ).get_system()
 
-        solidification_rate_CET, thermal_gradient_CET, equiaxed_fractions_CET, tip_radius_CET, dendrite_tip_undercooling_CET = get_CET_grid(
+        solidification_rate_CET, thermal_gradient_CET, equiaxed_fractions_CET, tip_radius_CET, dendrite_tip_undercooling_CET, nan_points = get_CET_grid(
             system,
             solutes,
             primary_phase=primary_phase,
@@ -338,9 +348,9 @@ def request_GR_Grid_from_excel(
             disable_output=disable_output,
         )
 
-        lines = get_CET_lines(
+        line_r, lines = get_CET_lines(
             system,
-            (4, 9),
+            (3, 10),
             solutes,
             primary_phase=primary_phase,
             interfacial_energy=interfacial_energy,
@@ -372,10 +382,12 @@ def request_GR_Grid_from_excel(
                 marker="s",
                 s=90,
             )
-            axs.plot(solidification_rate_CET, lines[0], color="limegreen", linewidth=3)
-            axs.plot(solidification_rate_CET, lines[1], color="orange", linewidth=3)
-            axs.plot(solidification_rate_CET, lines[2], color="dodgerblue", linewidth=3)
-            axs.set_ylim(5*10**3, 1.8*10**9)
+            axs.plot(line_r, lines[0], color="limegreen", linewidth=3)
+            axs.plot(line_r, lines[1], color="orange", linewidth=3)
+            axs.plot(line_r, lines[2], color="dodgerblue", linewidth=3)
+            #axs.set_ylim(5*10**3, 1.8*10**9)
+            axs.set_xlim(1e-7, 1e1)
+            axs.set_ylim(1e3, 1e10)
             axs.set_xscale("log")
             axs.set_yscale("log")
             axs.set_xlabel("Solidification Rate, R (m/s)")
@@ -390,6 +402,15 @@ def request_GR_Grid_from_excel(
                     point_kwargs=overlay_kwargs,
                 )
                 axs.legend(loc="best")
+
+            if nan_points:
+                nan_r, nan_g = np.asarray(nan_points).T
+                print(
+                    "fractionEquiaxedGrains returned NaN at "
+                    f"{len(nan_points)} grid points. "
+                    f"R range: {nan_r.min():.3e} to {nan_r.max():.3e} m/s, "
+                    f"G range: {nan_g.min():.3e} to {nan_g.max():.3e} K/m"
+                )
 
             if save_path:
                 os.makedirs(os.path.dirname(save_path), exist_ok=True) if os.path.dirname(save_path) else None

@@ -54,3 +54,10 @@ Cp_eff3 = (H_boiling - H_RT)/(T_boiling - T_RT) #J/mol*K
 MW = 180.59260 #g/mol
 Cp_eff3 = Cp_eff3 / MW * 1000
 print("Effective Cp using boiling enthalpy:", Cp_eff3)
+
+# Effective heat capacity, using THERMOCALC VALUES (J/(kg*K))
+# Cp_eff = Cp + Lvap/(Tb-Tliq)
+Lvap0 = 0
+Cp_eff = 251.6173225 + (Lvap_0/(MW_0/1000))/(Tb_0-3454.846467) #ORIGINAL --> OVERCORRECTING
+#Cp_eff = 251.6173225 + (Lvap_0/(MW_0/1000))/(300)
+print("Effective Cp:", Cp_eff, "J/kgK")

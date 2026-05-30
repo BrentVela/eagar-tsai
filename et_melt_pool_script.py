@@ -79,22 +79,24 @@ def _build_coordinate_ranges_from_limits(x_limits_m, y_limits_m, z_limits_m, spa
     )
 
 
-def _volume_limits_from_bounds(bounds, beam_two_sigma_m, padding_um=(100.0, 100.0, 50.0)):
+def _volume_limits_from_bounds(bounds, beam_two_sigma_m, spatial_res_um, padding_um=(100.0, 100.0, 50.0)):
     """Return cropped volume limits around the melt pool or beam if no melt pool exists."""
-    pad_x, pad_y, pad_z = np.asarray(padding_um, dtype='f8') * 1.0e-6
+    pad_x = float(padding_um[0]) * 1.0e-6
+    y_max = 200.0e-6
+    z_extra = 5.0 * float(spatial_res_um) * 1.0e-6
 
     if bounds is None:
         half_span = max(2.0 * beam_two_sigma_m, 100.0e-6)
         return (
             (-half_span, half_span),
-            (0.0, half_span),
+            (0.0, y_max),
             (-half_span, 0.0),
         )
 
     return (
         (bounds['x_min_m'] - pad_x, bounds['x_max_m'] + pad_x),
-        (0.0, bounds['y_max_m'] + pad_y),
-        (bounds['z_min_m'] - pad_z, 0.0),
+        (0.0, y_max),
+        (bounds['z_min_m'] - z_extra, 0.0),
     )
 
 
@@ -202,6 +204,7 @@ def _run_chunk(params):
                 x_limits_m, y_limits_m, z_limits_m = _volume_limits_from_bounds(
                     melt_bounds,
                     beam1.twoSigma[i],
+                    spatial_res_um,
                     padding_um=volume_padding_um,
                 )
                 nxrange_v, nyrange_v, nzrange_v, tvolume = temp_volume_from_row(
@@ -237,7 +240,7 @@ def _run_chunk(params):
 
     if out_dir is not None:
         os.makedirs(out_dir, exist_ok=True)
-        data.to_csv(path.join(out_dir, f'ET_v3_OUT_{chunk_num}_Ni95Nb5_4.csv'), index=False)
+        data.to_csv(path.join(out_dir, f'ET_v3_OUT_{chunk_num}_alloy0.csv'), index=False)
 
     return data
 
@@ -385,6 +388,7 @@ def eagarTsaiParam(beam,material,simParam,i):
         # Now want to find the width + depth (can do it in same outer loop)
         yLength = 0
         zLength = 0
+        zMinMelt = 0.0
         for i1 in np.arange(np.size(meltXInd,axis=0)):
             meltYInd = np.squeeze(np.where(tplanexy[:,meltXInd[i1]] > tMelt))
             tmpYLength = np.amax(nyrange[meltYInd]) - np.amin(nyrange[meltYInd])
@@ -395,6 +399,7 @@ def eagarTsaiParam(beam,material,simParam,i):
             tmpZLength = np.amax(nzrange[meltZInd]) - np.amin(nzrange[meltZInd])
             if tmpZLength > zLength:
                 zLength = tmpZLength
+                zMinMelt = np.amin(nzrange[meltZInd])
 		
         # Test to see if the domain is the correct size
         if np.isclose(np.amax(nxrange[meltXInd]),xMax):
@@ -424,7 +429,7 @@ def eagarTsaiParam(beam,material,simParam,i):
                 'x_min_m': float(np.amin(nxrange[meltXInd])),
                 'x_max_m': float(np.amax(nxrange[meltXInd])),
                 'y_max_m': float(yLength),
-                'z_min_m': float(np.amin(nzrange[meltZInd])),
+                'z_min_m': float(zMinMelt),
                 'z_max_m': 0.0,
             }
     else:
@@ -742,9 +747,9 @@ if __name__ == "__main__":
         row2, #results_df if you want all the alloys
         chunk_size=1,
         workers=12,
-        out_dir='CalcFiles/Test12',
+        out_dir='CalcFiles/Test12_3Dfield/new_bounds/new',
         heatmap_rows=[0],      # original row index from the Excel file (EXCEL_ROW# - 2). Selected rows get the 3D temperature CSV and heatmap PNG.
-        heatmap_dir='CalcFiles/Test12',
+        heatmap_dir='CalcFiles/Test12_3Dfield/new_bounds/new',
     )
 
 

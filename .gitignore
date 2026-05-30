@@ -10,3 +10,6 @@ __pycache__/
 CalcFiles/
 .venv/
 .codex
+.vscode
+cache/
+TC_Python/

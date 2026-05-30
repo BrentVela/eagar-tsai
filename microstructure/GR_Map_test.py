@@ -2,16 +2,16 @@ from GR_Map import request_GR_Grid_from_excel
 import matplotlib.pyplot as plt
 
 # Edit these parameters before each run.
-excel_path = "et_input_data_example.xlsx"
-row_index = 0  # first alloy (row 2 in the spreadsheet)
+excel_path = "et_custom_input_data.xlsx"
+row_index = 6  # first alloy (row 2 in the spreadsheet)
 element_cols = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V"]
 thermo_db = "TCHEA8"
 kinetic_db = "MOBHEA3"
 primary_phase = "BCC_B2"
 interfacial_energy = 0.5
-output_path = "CalcFiles/Test11/gr_map_with_liquidus_overlay_alloy0.png"
-overlay_csv = "CalcFiles/Test11/liquidus_normal_alloy0.csv"
-overlay_label = "liquidus_normal_alloy0"
+output_path = "CalcFiles/Test16/125_0.2/GR_map_overlay_alloy0_125_0.2.png"
+overlay_csv = "CalcFiles/Test16/125_0.2/liquidus_GR_alloy0_125_0.2.csv"
+overlay_label = "3D liquidus boundary"
 disable_cache = False
 show_plot = False
 
