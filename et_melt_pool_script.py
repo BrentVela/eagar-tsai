@@ -741,15 +741,15 @@ if __name__ == "__main__":
     savename = 'prop_out'
     ##########################################################################
 
-    # Only run Excel row 2 (row 1 is header)
-    row2 = results_df.iloc[[0]] # iloc[[EXCEL_ROW# - 2]]
+    # Only run one Excel row
+    row_num = results_df.iloc[[0]] # iloc[[EXCEL_ROW# - 2]]
     compute_melt_pool(
-        row2, #results_df if you want all the alloys
+        row_num, #results_df if you want all the alloys
         chunk_size=1,
         workers=12,
-        out_dir='CalcFiles/Test12_3Dfield/new_bounds/new',
+        out_dir='CalcFiles/Test18',
         heatmap_rows=[0],      # original row index from the Excel file (EXCEL_ROW# - 2). Selected rows get the 3D temperature CSV and heatmap PNG.
-        heatmap_dir='CalcFiles/Test12_3Dfield/new_bounds/new',
+        heatmap_dir='CalcFiles/Test18',
     )
 
 

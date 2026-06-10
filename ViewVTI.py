@@ -2,7 +2,7 @@ import pyvista as pv
 
 T_L = 3454.846466711204
 
-grid = pv.read("CalcFiles/Test16/125_0.2/ET_3D_temperature_alloy0_125_0.2.vti")
+grid = pv.read("CalcFiles/Test16/250_0.2/ET_3D_temperature_alloy0_250_0.2.vti")
 
 surface = grid.extract_surface(algorithm="dataset_surface")
 liquidus_line = surface.contour([T_L], scalars="Temperature_K").tube(radius=1.0)

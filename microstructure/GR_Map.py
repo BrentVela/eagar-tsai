@@ -24,14 +24,25 @@ def _tc_python_calcfiles_dir():
 
 def _plot_overlay_points(ax, overlay_csv, label=None, point_kwargs=None):
     overlay_df = pd.read_csv(overlay_csv)
-    if "G" not in overlay_df.columns:
-        raise ValueError(f"{overlay_csv} is missing required column 'G'.")
-    if "R_x" not in overlay_df.columns and "R" not in overlay_df.columns:
-        raise ValueError(f"{overlay_csv} is missing required column 'R_x' or 'R'.")
+    g_col = next(
+        (column for column in ("G", "Gradient_Magnitude") if column in overlay_df.columns),
+        None,
+    )
+    r_col = next(
+        (column for column in ("R_x", "R", "R (m/s)") if column in overlay_df.columns),
+        None,
+    )
+    if g_col is None:
+        raise ValueError(
+            f"{overlay_csv} is missing required column 'G' or 'Gradient_Magnitude'."
+        )
+    if r_col is None:
+        raise ValueError(
+            f"{overlay_csv} is missing required column 'R_x', 'R', or 'R (m/s)'."
+        )
 
-    r_col = "R_x" if "R_x" in overlay_df.columns else "R"
     r_values = overlay_df[r_col].to_numpy(dtype=float)
-    g_values = overlay_df["G"].to_numpy(dtype=float)
+    g_values = overlay_df[g_col].to_numpy(dtype=float)
 
     mask = np.isfinite(r_values) & np.isfinite(g_values) & (r_values > 0) & (g_values > 0)
     if not np.any(mask):
@@ -54,6 +65,30 @@ def _plot_overlay_points(ax, overlay_csv, label=None, point_kwargs=None):
         label=label or f"{os.path.basename(overlay_csv)} overlay",
         **kwargs,
     )
+
+
+def _as_overlay_list(value, count, name):
+    if isinstance(value, (list, tuple)):
+        if len(value) != count:
+            raise ValueError(f"{name} must have {count} entries when overlay_csv has {count} entries.")
+        return list(value)
+    return [value] * count
+
+
+def _style_overlay_legend(legend, marker_size=48):
+    handles = getattr(legend, "legend_handles", None)
+    if handles is None:
+        handles = getattr(legend, "legendHandles", [])
+
+    for handle in handles:
+        if hasattr(handle, "set_alpha"):
+            handle.set_alpha(1.0)
+        if hasattr(handle, "set_sizes"):
+            handle.set_sizes([marker_size])
+        if hasattr(handle, "set_edgecolors"):
+            handle.set_edgecolors(["black"])
+        if hasattr(handle, "set_linewidths"):
+            handle.set_linewidths([0.8])
 
 
 def _load_alloy_from_excel(excel_path, row_index, element_cols):
@@ -324,6 +359,7 @@ def request_GR_Grid_from_excel(
     overlay_csv=None,
     overlay_label=None,
     overlay_kwargs=None,
+    legend_loc="upper center",
 ):
     elements, solutes = _load_alloy_from_excel(excel_path, row_index, element_cols)
 
@@ -395,13 +431,18 @@ def request_GR_Grid_from_excel(
             fig.colorbar(mapper, ax=axs, label="Equiaxed Fraction")
 
             if overlay_csv:
-                _plot_overlay_points(
-                    axs,
-                    overlay_csv=overlay_csv,
-                    label=overlay_label,
-                    point_kwargs=overlay_kwargs,
-                )
-                axs.legend(loc="best")
+                overlay_csvs = list(overlay_csv) if isinstance(overlay_csv, (list, tuple)) else [overlay_csv]
+                overlay_labels = _as_overlay_list(overlay_label, len(overlay_csvs), "overlay_label")
+                overlay_kwarg_sets = _as_overlay_list(overlay_kwargs, len(overlay_csvs), "overlay_kwargs")
+                for csv_path, label, kwargs in zip(overlay_csvs, overlay_labels, overlay_kwarg_sets):
+                    _plot_overlay_points(
+                        axs,
+                        overlay_csv=csv_path,
+                        label=label,
+                        point_kwargs=kwargs,
+                    )
+                legend = axs.legend(loc=legend_loc)
+                _style_overlay_legend(legend)
 
             if nan_points:
                 nan_r, nan_g = np.asarray(nan_points).T
