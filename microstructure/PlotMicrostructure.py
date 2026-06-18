@@ -6,6 +6,8 @@ os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy.interpolate import griddata
+from scipy.ndimage import gaussian_filter
 
 from tc_python import CompositionUnit, TCPython
 
@@ -16,11 +18,15 @@ except ImportError:
 
 
 LIQUIDUS_CSV = (
-    "CalcFiles/Test17/TCAM_keyholing_alloy0_250_0.5/ParaView_fine0.15mm/subdivide4_fine0.15_data.csv"
+    "CalcFiles/Test17/TCAM_keyholing_alloy0_250_0.5/ParaView_fine0.15mm/subdivide_nosmooth_fine0.15_data.csv"
 )
 OUTPUT_PATH = (
-    "CalcFiles/Test17/TCAM_keyholing_alloy0_250_0.5/ParaView_fine0.15mm/microstructure_projection_fine0.15.png"
+    "CalcFiles/Test17/TCAM_keyholing_alloy0_250_0.5/ParaView_fine0.15mm/microstructure_projection_fine0.15_subdivide_nosmooth.png"
 )
+INTERPOLATE_PARAVIEW = False
+INTERPOLATION_Y_POINTS = 75
+INTERPOLATION_Z_POINTS = 115
+SMOOTHING_SIGMA = 0.0
 POINT_SIZE = 10
 
 EXCEL_PATH = "et_custom_input_data.xlsx"
@@ -59,8 +65,10 @@ def _load_projected_liquidus(csv_path):
     df = pd.read_csv(csv_path)
 
     if ET_COLUMNS.issubset(df.columns):
+        is_paraview = False
         df = df.loc[:, ["x", "y", "z", "G", "R"]].copy()
     elif set(PARAVIEW_COLUMNS).issubset(df.columns):
+        is_paraview = True
         df = df.rename(columns=PARAVIEW_COLUMNS)
         df = df.loc[:, ["x", "y", "z", "G", "R"]].copy()
         df.loc[:, ["x", "y", "z"]] *= 1.0e6
@@ -79,11 +87,38 @@ def _load_projected_liquidus(csv_path):
         raise ValueError(f"No positive-G, positive-R liquidus points found in {csv_path}.")
 
     deepest = df.loc[df["z"].idxmin()]
+    df.attrs["is_paraview"] = is_paraview
     return df, deepest
 
 
 def _positive_r_projection_points(liquidus):
     return liquidus.sort_values("x").reset_index(drop=True)
+
+
+def _interpolate_projected_points(projected):
+    points = projected.groupby(["y", "z"], as_index=False)[["G", "R"]].mean()
+    y = np.linspace(points["y"].min(), points["y"].max(), INTERPOLATION_Y_POINTS)
+    z = np.linspace(points["z"].min(), points["z"].max(), INTERPOLATION_Z_POINTS)
+    yy, zz = np.meshgrid(y, z)
+
+    grid_points = (points["y"], points["z"])
+    g_grid = griddata(grid_points, points["G"], (yy, zz), method="linear")
+    r_grid = griddata(grid_points, points["R"], (yy, zz), method="linear")
+    valid = np.isfinite(g_grid) & np.isfinite(r_grid)
+    g_grid = gaussian_filter(np.where(valid, g_grid, 0.0), sigma=SMOOTHING_SIGMA)
+    r_grid = gaussian_filter(np.where(valid, r_grid, 0.0), sigma=SMOOTHING_SIGMA)
+    weights = gaussian_filter(valid.astype(float), sigma=SMOOTHING_SIGMA)
+    g_grid = np.divide(g_grid, weights, where=weights > 0.0)
+    r_grid = np.divide(r_grid, weights, where=weights > 0.0)
+
+    return pd.DataFrame(
+        {
+            "y": yy[valid],
+            "z": zz[valid],
+            "G": g_grid[valid],
+            "R": r_grid[valid],
+        }
+    )
 
 
 def _format_title_value(value):
@@ -189,6 +224,8 @@ def plot_projected_liquidus(
     title = _projection_title(excel_path, row_index)
     liquidus, deepest = _load_projected_liquidus(liquidus_csv)
     projected = _positive_r_projection_points(liquidus)
+    if INTERPOLATE_PARAVIEW and liquidus.attrs["is_paraview"]:
+        projected = _interpolate_projected_points(projected)
 
     r_grid, g_grid, equiaxed_fraction = _calculate_cet_grid(
         excel_path=excel_path,
@@ -275,8 +312,8 @@ def plot_projected_liquidus(
         "Projected {count} positive-R liquidus points from x = {xmin:.3f} to {xmax:.3f} um. "
         "Deepest point: y = {y:.3f} um, z = {z:.3f} um.".format(
             count=len(projected),
-            xmin=projected["x"].min(),
-            xmax=projected["x"].max(),
+            xmin=liquidus["x"].min(),
+            xmax=liquidus["x"].max(),
             y=deepest["y"],
             z=deepest["z"],
         )

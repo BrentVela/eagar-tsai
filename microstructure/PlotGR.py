@@ -4,17 +4,24 @@ import sys
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy.ndimage import gaussian_filter
+from scipy.interpolate import griddata
 
 
 LIQUIDUS_CSV = (
-    "CalcFiles/Test17/TCAM_keyholing_alloy0_250_0.5/ParaView_fine0.15mm/subdivide4_fine0.15_data.csv"
+    "CalcFiles/Test17/TCAM_keyholing_alloy0_250_0.5/ParaView_fine0.15mm/subdivide_nosmooth_fine0.15_data.csv"
 )
 OUTPUT_PATH = (
-    "CalcFiles/Test17/TCAM_keyholing_alloy0_250_0.5/ParaView_fine0.15mm/GR_projection_fine0.15_subdivide4.png"
+    "CalcFiles/Test17/TCAM_keyholing_alloy0_250_0.5/ParaView_fine0.15mm/GR_projection_fine0.15_subdivide_nosmooth.png"
 )
+INTERPOLATE_PARAVIEW = False
+INTERPOLATION_Y_POINTS = 75
+INTERPOLATION_Z_POINTS = 115
+SMOOTHING_SIGMA = 0.0
 POINT_SIZE = 5
 
 ET_COLUMNS = {"x", "y", "z", "G", "R"}
@@ -31,8 +38,10 @@ def _load_liquidus_points(csv_path):
     df = pd.read_csv(csv_path)
 
     if ET_COLUMNS.issubset(df.columns):
+        is_paraview = False
         df = df.loc[:, ["x", "y", "z", "G", "R"]].copy()
     elif set(PARAVIEW_COLUMNS).issubset(df.columns):
+        is_paraview = True
         df = df.rename(columns=PARAVIEW_COLUMNS)
         df = df.loc[:, ["x", "y", "z", "G", "R"]].copy()
         df.loc[:, ["x", "y", "z"]] *= 1.0e6
@@ -49,7 +58,35 @@ def _load_liquidus_points(csv_path):
     if df.empty:
         raise ValueError(f"No liquidus points found in {csv_path}.")
 
-    return df.sort_values("x").reset_index(drop=True)
+    df = df.sort_values("x").reset_index(drop=True)
+    df.attrs["is_paraview"] = is_paraview
+    return df
+
+
+def _interpolate_projected_points(projected):
+    points = projected.groupby(["y", "z"], as_index=False)[["G", "R"]].mean()
+    y = np.linspace(points["y"].min(), points["y"].max(), INTERPOLATION_Y_POINTS)
+    z = np.linspace(points["z"].min(), points["z"].max(), INTERPOLATION_Z_POINTS)
+    yy, zz = np.meshgrid(y, z)
+
+    grid_points = (points["y"], points["z"])
+    g_grid = griddata(grid_points, points["G"], (yy, zz), method="linear")
+    r_grid = griddata(grid_points, points["R"], (yy, zz), method="linear")
+    valid = np.isfinite(g_grid) & np.isfinite(r_grid)
+    g_grid = gaussian_filter(np.where(valid, g_grid, 0.0), sigma=SMOOTHING_SIGMA)
+    r_grid = gaussian_filter(np.where(valid, r_grid, 0.0), sigma=SMOOTHING_SIGMA)
+    weights = gaussian_filter(valid.astype(float), sigma=SMOOTHING_SIGMA)
+    g_grid = np.divide(g_grid, weights, where=weights > 0.0)
+    r_grid = np.divide(r_grid, weights, where=weights > 0.0)
+
+    return pd.DataFrame(
+        {
+            "y_plot": yy[valid],
+            "z_plot": zz[valid],
+            "G": g_grid[valid],
+            "R": r_grid[valid],
+        }
+    )
 
 
 def plot_gr_projection(
@@ -65,23 +102,27 @@ def plot_gr_projection(
     bottom_colorbar_pad=0.55,
 ):
     projected = _load_liquidus_points(liquidus_csv)
-    projected["y_plot"] = projected["y"].round(0)
-    projected["z_plot"] = projected["z"].round(0)
+    if INTERPOLATE_PARAVIEW and projected.attrs["is_paraview"]:
+        plot_points = _interpolate_projected_points(projected)
+    else:
+        plot_points = projected.copy()
+        plot_points["y_plot"] = plot_points["y"].round(0)
+        plot_points["z_plot"] = plot_points["z"].round(0)
 
     fig, ax = plt.subplots(figsize=(7.0, 5.0))
     r_scatter = ax.scatter(
-        -projected["y_plot"],
-        projected["z_plot"],
-        c=projected["R"],
+        -plot_points["y_plot"],
+        plot_points["z_plot"],
+        c=plot_points["R"],
         cmap="YlOrRd",
         marker="o",
         s=point_size,
         linewidths=0,
     )
     g_scatter = ax.scatter(
-        projected["y_plot"],
-        projected["z_plot"],
-        c=projected["G"],
+        plot_points["y_plot"],
+        plot_points["z_plot"],
+        c=plot_points["G"],
         cmap="BuPu",
         marker="o",
         s=point_size,
@@ -138,6 +179,7 @@ def plot_gr_projection(
             xmax=projected["x"].max(),
         )
     )
+    print(f"Plotted {len(plot_points)} points per half.")
     return output_path, projected
 
 
