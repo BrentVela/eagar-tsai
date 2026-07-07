@@ -13,16 +13,17 @@ from scipy.interpolate import griddata
 
 
 LIQUIDUS_CSV = (
-    "CalcFiles/Test17/TCAM_keyholing_alloy0_250_0.5/ParaView_fine0.15mm/subdivide_nosmooth_fine0.15_data.csv"
+    "CalcFiles/Bayesian_Data/New/TCAM/alloy0_250_0.5/subdivide_data.csv"
 )
 OUTPUT_PATH = (
-    "CalcFiles/Test17/TCAM_keyholing_alloy0_250_0.5/ParaView_fine0.15mm/GR_projection_fine0.15_subdivide_nosmooth.png"
+    "CalcFiles/Bayesian_Data/New/TCAM/alloy0_250_0.5/GR_projection.png"
 )
 INTERPOLATE_PARAVIEW = False
 INTERPOLATION_Y_POINTS = 75
 INTERPOLATION_Z_POINTS = 115
 SMOOTHING_SIGMA = 0.0
-POINT_SIZE = 5
+POINT_SIZE = 7
+MICRON_SCALE_THRESHOLD = 1.0e-2
 
 ET_COLUMNS = {"x", "y", "z", "G", "R"}
 PARAVIEW_COLUMNS = {
@@ -32,6 +33,16 @@ PARAVIEW_COLUMNS = {
     "Gradient_Magnitude": "G",
     "R (m/s)": "R",
 }
+
+
+def _coordinates_to_microns(df):
+    coord_cols = ["x", "y", "z"]
+    max_abs_coord = df[coord_cols].abs().to_numpy().max()
+    if max_abs_coord < MICRON_SCALE_THRESHOLD:
+        df.loc[:, coord_cols] *= 1.0e6
+        df.attrs["coordinate_units"] = "m"
+    else:
+        df.attrs["coordinate_units"] = "um"
 
 
 def _load_liquidus_points(csv_path):
@@ -44,7 +55,7 @@ def _load_liquidus_points(csv_path):
         is_paraview = True
         df = df.rename(columns=PARAVIEW_COLUMNS)
         df = df.loc[:, ["x", "y", "z", "G", "R"]].copy()
-        df.loc[:, ["x", "y", "z"]] *= 1.0e6
+        _coordinates_to_microns(df)
     else:
         et_missing = sorted(ET_COLUMNS.difference(df.columns))
         paraview_missing = sorted(set(PARAVIEW_COLUMNS).difference(df.columns))

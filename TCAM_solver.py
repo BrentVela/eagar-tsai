@@ -26,7 +26,7 @@ Example element columns for this setup:
 `W`, `Re`, `Nb`, `Ta`, `Mo`, `Hf`, `V`
 """
 
-INPUT_XLSX = "TCAM_input_data_1row.xlsx"
+INPUT_XLSX = "TCAM_solver_data.xlsx"
 OUTPUT_CSV = "CalcFiles/Test15/TCAM_Steady_TCHEA8_results_0and13.csv"
 START_EXCEL_ROW = 2
 

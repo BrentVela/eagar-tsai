@@ -199,7 +199,7 @@ def _run_chunk(params):
                     ylabel='y (transverse direction, um)',
                     cmap='inferno',
                     vmin=0.0,
-                    vmax=15000.0, #Temperature limit
+                    vmax=12000.0, #Temperature limit
                 )
                 x_limits_m, y_limits_m, z_limits_m = _volume_limits_from_bounds(
                     melt_bounds,
@@ -742,14 +742,14 @@ if __name__ == "__main__":
     ##########################################################################
 
     # Only run one Excel row
-    row_num = results_df.iloc[[0]] # iloc[[EXCEL_ROW# - 2]]
+    row_num = results_df.iloc[[10]] # iloc[[EXCEL_ROW# - 2]]
     compute_melt_pool(
         row_num, #results_df if you want all the alloys
         chunk_size=1,
-        workers=12,
-        out_dir='CalcFiles/Test18',
-        heatmap_rows=[0],      # original row index from the Excel file (EXCEL_ROW# - 2). Selected rows get the 3D temperature CSV and heatmap PNG.
-        heatmap_dir='CalcFiles/Test18',
+        workers=1,
+        out_dir='CalcFiles/Bayesian_Data/ET_prior/og_file',
+        heatmap_rows=[10],      # original row index from the Excel file (EXCEL_ROW# - 2). Selected rows get the 3D temperature CSV and heatmap PNG.
+        heatmap_dir='CalcFiles/Bayesian_Data/ET_prior/og_file',
     )
 
 

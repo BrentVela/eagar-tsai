@@ -127,14 +127,14 @@ import pandas as pd
 from eagar_tsai import SimulationDomain, compute_melt_pool
 
 df = pd.DataFrame({
-    "velocity_m_s":              [0.2],
-    "power_w":                   [125.0],
+    "velocity_m_s":              [0.10],
+    "power_w":                   [400.0],
     "beam_diameter_m":           [8e-5],
     "absorptivity":              [0.590243085],
-    "liquidus_temperature_k":    [3454.846467],
-    "thermal_conductivity_w_mk": [23.74950354],
-    "density_kg_m3":             [18038.92072],
-    "specific_heat_j_kgk":       [251.6173225],
+    "liquidus_temperature_k":    [3454.8464667112],
+    "thermal_conductivity_w_mk": [36.27217],
+    "density_kg_m3":             [18038.93493],
+    "specific_heat_j_kgk":       [264.1654169],
 })
 
 domain = SimulationDomain(
@@ -149,8 +149,8 @@ result = compute_melt_pool(
     domain=domain,
     workers=12,
     chunk_size=50,
-    output_dir="CalcFiles/Test16/125_0.2",
+    output_dir="CalcFiles/Test19/400_0.10",
     return_field=True,
 )
 print(result[["melt_length_um", "melt_width_um", "melt_depth_um"]])
-result.loc[0, "temperature_field"].plot(output="CalcFiles/Test16/125_0.2/temperature_field_alloy0_250_0.5.png")
+result.loc[0, "temperature_field"].plot(output="CalcFiles/Test19/400_0.10/temperature_field_alloy0_400_0.10.png")

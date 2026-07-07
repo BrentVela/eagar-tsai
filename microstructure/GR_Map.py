@@ -43,6 +43,9 @@ def _plot_overlay_points(ax, overlay_csv, label=None, point_kwargs=None):
 
     r_values = overlay_df[r_col].to_numpy(dtype=float)
     g_values = overlay_df[g_col].to_numpy(dtype=float)
+    finite_g = g_values[np.isfinite(g_values) & (g_values > 0)]
+    if finite_g.size and np.nanmedian(finite_g) < 1.0e4:
+        g_values = g_values * 1.0e6
 
     mask = np.isfinite(r_values) & np.isfinite(g_values) & (r_values > 0) & (g_values > 0)
     if not np.any(mask):
@@ -360,6 +363,7 @@ def request_GR_Grid_from_excel(
     overlay_label=None,
     overlay_kwargs=None,
     legend_loc="upper center",
+    show_cet_lines=False,
 ):
     elements, solutes = _load_alloy_from_excel(excel_path, row_index, element_cols)
 
@@ -418,9 +422,10 @@ def request_GR_Grid_from_excel(
                 marker="s",
                 s=90,
             )
-            axs.plot(line_r, lines[0], color="limegreen", linewidth=3)
-            axs.plot(line_r, lines[1], color="orange", linewidth=3)
-            axs.plot(line_r, lines[2], color="dodgerblue", linewidth=3)
+            if show_cet_lines:
+                axs.plot(line_r, lines[0], color="limegreen", linewidth=3)
+                axs.plot(line_r, lines[1], color="orange", linewidth=3)
+                axs.plot(line_r, lines[2], color="dodgerblue", linewidth=3)
             #axs.set_ylim(5*10**3, 1.8*10**9)
             axs.set_xlim(1e-7, 1e1)
             axs.set_ylim(1e3, 1e10)

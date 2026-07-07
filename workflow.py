@@ -4,9 +4,16 @@ from pathlib import Path
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 
+import numpy as np
 import pandas as pd
 
-from eagar_tsai import SimulationDomain, compute_melt_pool
+from eagar_tsai import (
+    BeamParameters,
+    MaterialProperties,
+    SimulationDomain,
+    compute_melt_pool,
+    compute_temperature_volume,
+)
 from ETtoVTI import export_eagar_tsai_vti
 from microstructure.GRFrom3D import compute_gr_from_vti
 from microstructure.GR_Map import request_GR_Grid_from_excel
@@ -15,10 +22,10 @@ from microstructure.PlotMicrostructure import plot_projected_liquidus
 from tc_python import CompositionUnit
 
 
-DEFAULT_EXCEL = "et_custom_input_data.xlsx"
-DEFAULT_ROW_INDEX = 5 #EXCEL ROW - 2
+DEFAULT_EXCEL = "effective_cp_data.xlsx"
+DEFAULT_ROW_INDEX = 2
 DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V"]
-DEFAULT_CALC_ROOT = "CalcFiles/Test16/275_1.65_v2"
+DEFAULT_CALC_ROOT = "CalcFiles/Bayesian_Data/New/ET/alloy0/250_0.5_5um"
 
 DEFAULT_THERMO_DB = "TCHEA8"
 DEFAULT_KINETIC_DB = "MOBHEA3"
@@ -28,8 +35,8 @@ DEFAULT_INTERFACIAL_ENERGY = 0.5
 DEFAULT_DOMAIN = SimulationDomain(
     x_length_um=600.0,
     y_length_um=200.0,
-    z_depth_um=150.0,
-    spatial_resolution_um=1.0,
+    z_depth_um=250.0,
+    spatial_resolution_um=5.0,
 )
 DEFAULT_VTI_LIMITS_UM = {
     "x": (-160.0, 380.0),
@@ -51,7 +58,13 @@ INPUT_COLUMNS = {
         "EQ LT THCD (W/mK)",
     ],
     "density_kg_m3": ["density_kg_m3", "RT Density (kg/m3)", "PROP RT Density (kg/m3)"],
-    "specific_heat_j_kgk": ["specific_heat_j_kgk", "Cp, LT (J/kgK)", "Cp_LT", "PROP LT C (J/(kg K))"],
+    "specific_heat_j_kgk": [
+        "specific_heat_j_kgk",
+        "Cp, Sheikh (J/kgK)",
+        "Cp, LT (J/kgK)",
+        "Cp_LT",
+        "PROP LT C (J/(kg K))",
+    ],
 }
 
 
@@ -111,6 +124,46 @@ def _expanded_vti_limits(result, padding_um):
     }
 
 
+def _temperature_volume_to_dataframe(volume):
+    x_um = volume.x_range_um
+    y_um = volume.y_range_um
+    z_um = volume.z_range_um
+    temperature = volume.T_xyz
+
+    xx, yy, zz = np.meshgrid(x_um, y_um, z_um, indexing="ij")
+    return pd.DataFrame(
+        {
+            "x": xx.ravel(),
+            "y": yy.ravel(),
+            "z": zz.ravel(),
+            "T_ET": temperature.ravel(order="C"),
+        }
+    )
+
+
+def _compute_temperature_volume(process_df, domain, workers, chunk_size):
+    row = process_df.iloc[0]
+    beam = BeamParameters(
+        beam_diameter=float(row["beam_diameter_m"]),
+        power=float(row["power_w"]),
+        velocity=float(row["velocity_m_s"]),
+        absorptivity=float(row["absorptivity"]),
+    )
+    material = MaterialProperties(
+        liquidus_temperature=float(row["liquidus_temperature_k"]),
+        thermal_conductivity=float(row["thermal_conductivity_w_mk"]),
+        density=float(row["density_kg_m3"]),
+        specific_heat=float(row["specific_heat_j_kgk"]),
+    )
+    return compute_temperature_volume(
+        beam=beam,
+        material=material,
+        domain=domain,
+        workers=workers,
+        chunk_size=chunk_size,
+    )
+
+
 def _warn_if_liquidus_touches_vti_boundary(liquidus_df, vti_limits_um):
     boundary_checks = {
         "x_min": ("x", vti_limits_um["x"][0], liquidus_df["x"].min()),
@@ -136,8 +189,9 @@ def run_workflow(args):
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    et_csv = output_dir / f"ET_{stem}.csv"
     vti_path = output_dir / f"ET_3D_temperature_{stem}.vti"
-    meta_path = output_dir / "ET_0000.csv"
+    meta_path = output_dir / f"ET_meta_{stem}.csv"
     liquidus_csv = output_dir / f"liquidus_GR_{stem}.csv"
     gr_map_png = output_dir / f"GR_map_overlay_{stem}.png"
     projected_png = output_dir / f"projected_microstructure_{stem}.png"
@@ -150,7 +204,7 @@ def run_workflow(args):
         domain=DEFAULT_DOMAIN,
         workers=args.workers,
         chunk_size=args.chunk_size,
-        output_dir=output_dir,
+        output_dir=None,
         return_field=True,
     )
     result.to_csv(meta_path, index=False)
@@ -160,6 +214,16 @@ def run_workflow(args):
     if temperature_field is not None:
         temperature_field.plot(output=temperature_png)
         print(f"Wrote {temperature_png}")
+
+    print("Writing matched ET-prior-style 3D temperature CSV...")
+    volume = _compute_temperature_volume(
+        process_df=process_df,
+        domain=DEFAULT_DOMAIN,
+        workers=args.workers,
+        chunk_size=args.chunk_size,
+    )
+    _temperature_volume_to_dataframe(volume).to_csv(et_csv, index=False)
+    print(f"Wrote {et_csv}")
 
     vti_limits_um = _expanded_vti_limits(result, args.vti_padding_um)
     print(
@@ -237,6 +301,7 @@ def run_workflow(args):
 
     return {
         "output_dir": output_dir,
+        "et_csv": et_csv,
         "meta_csv": meta_path,
         "vti": vti_path,
         "liquidus_csv": liquidus_csv,

@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
@@ -18,19 +19,21 @@ except ImportError:
 
 
 LIQUIDUS_CSV = (
-    "CalcFiles/Test17/TCAM_keyholing_alloy0_250_0.5/ParaView_fine0.15mm/subdivide_nosmooth_fine0.15_data.csv"
+    "CalcFiles/Bayesian_Data/New/ET/alloy0/250_0.5_5um/250_0.5_workflow/liquidus_GR_alloy0_250_0.5.csv"
 )
 OUTPUT_PATH = (
-    "CalcFiles/Test17/TCAM_keyholing_alloy0_250_0.5/ParaView_fine0.15mm/microstructure_projection_fine0.15_subdivide_nosmooth.png"
+    "CalcFiles/Bayesian_Data/New/ET/alloy0/250_0.5_5um/250_0.5_workflow/projected_microstructure_alloy0_250_0.5.png"
 )
 INTERPOLATE_PARAVIEW = False
 INTERPOLATION_Y_POINTS = 75
 INTERPOLATION_Z_POINTS = 115
 SMOOTHING_SIGMA = 0.0
 POINT_SIZE = 10
+MICRON_SCALE_THRESHOLD = 1.0e-2
+GRADIENT_K_PER_UM_THRESHOLD = 1.0e4
 
-EXCEL_PATH = "et_custom_input_data.xlsx"
-ROW_INDEX = 0  # Alloy 0; zero-based pandas row index.
+EXCEL_PATH = "effective_cp_data.xlsx"
+ROW_INDEX = 2  # Alloy 0; zero-based pandas row index.
 ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V"]
 MAP_SOURCE = "excel_alloy"
 ET_COLUMNS = {"x", "y", "z", "G", "R"}
@@ -61,6 +64,26 @@ MAP_CONFIGS = {
 }
 
 
+def _coordinates_to_microns(df):
+    coord_cols = ["x", "y", "z"]
+    max_abs_coord = df[coord_cols].abs().to_numpy().max()
+    if max_abs_coord < MICRON_SCALE_THRESHOLD:
+        df.loc[:, coord_cols] *= 1.0e6
+        df.attrs["coordinate_units"] = "m"
+    else:
+        df.attrs["coordinate_units"] = "um"
+
+
+def _gradient_to_k_per_m(df):
+    finite_g = df["G"].to_numpy(dtype=float)
+    finite_g = finite_g[np.isfinite(finite_g) & (finite_g > 0)]
+    if finite_g.size and np.nanmedian(finite_g) < GRADIENT_K_PER_UM_THRESHOLD:
+        df.loc[:, "G"] *= 1.0e6
+        df.attrs["gradient_units"] = "K/um"
+    else:
+        df.attrs["gradient_units"] = "K/m"
+
+
 def _load_projected_liquidus(csv_path):
     df = pd.read_csv(csv_path)
 
@@ -71,7 +94,7 @@ def _load_projected_liquidus(csv_path):
         is_paraview = True
         df = df.rename(columns=PARAVIEW_COLUMNS)
         df = df.loc[:, ["x", "y", "z", "G", "R"]].copy()
-        df.loc[:, ["x", "y", "z"]] *= 1.0e6
+        _coordinates_to_microns(df)
     else:
         et_missing = sorted(ET_COLUMNS.difference(df.columns))
         paraview_missing = sorted(set(PARAVIEW_COLUMNS).difference(df.columns))
@@ -85,6 +108,7 @@ def _load_projected_liquidus(csv_path):
     df = df[(df["G"] > 0.0) & (df["R"] > 0.0)].copy()
     if df.empty:
         raise ValueError(f"No positive-G, positive-R liquidus points found in {csv_path}.")
+    _gradient_to_k_per_m(df)
 
     deepest = df.loc[df["z"].idxmin()]
     df.attrs["is_paraview"] = is_paraview
@@ -125,6 +149,17 @@ def _format_title_value(value):
     return f"{float(value):g}"
 
 
+def _format_title_label(value):
+    if isinstance(value, str):
+        return value.strip()
+    return _format_title_value(value)
+
+
+def _format_composition_title(value):
+    text = _format_title_label(value)
+    return re.sub(r"([A-Z][a-z]?)(\d+(?:\.\d+)?)", r"\1$_{\2}$", text)
+
+
 def _first_row_value(row, columns):
     for col in columns:
         if col in row.index and not pd.isna(row[col]):
@@ -134,13 +169,21 @@ def _first_row_value(row, columns):
 
 def _projection_title(excel_path, row_index):
     row = pd.read_excel(excel_path).iloc[row_index]
+    composition = _first_row_value(row, ["Composition", "composition"])
     alloy = _first_row_value(row, ["Alloy", "Unnamed: 0"])
     power = _first_row_value(row, ["power_w", "Power", "Power (W)", "P"])
     velocity = _first_row_value(row, ["velocity_m_s", "Velocity_m/s", "Velocity (m/s)", "v"])
 
-    if alloy is None or power is None or velocity is None:
+    if composition is not None:
+        title = _format_composition_title(composition)
+    elif alloy is not None:
+        title = f"Alloy {_format_title_value(alloy)}"
+    else:
         return "Melt Pool Liquidus Projection"
-    return f"Alloy {_format_title_value(alloy)} (P = {_format_title_value(power)}, V = {_format_title_value(velocity)})"
+
+    if power is None or velocity is None:
+        return title
+    return f"{title} P = {_format_title_value(power)}, V = {_format_title_value(velocity)}"
 
 
 def _calculate_cet_grid(
