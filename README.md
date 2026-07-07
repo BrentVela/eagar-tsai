@@ -1,3 +1,48 @@
+# Rapid Microstructure Prediction in Laser Powder Bed Fusion Using Bayesian Updating of Eagar–Tsai Model 
+
+This first section of the README details contributions by Kyle Swartz. To see the original Eagar-Tsai code implemented by Brent Vela, scroll past this section.
+
+## Scripts 
+
+Note: many of these files require you to hardcode the input and output file paths. Additionally, most ET functionality has been updated to use the [eagar-tsai Python library](https://arroyavelab.github.io/eagar-tsai).
+
+- `workflow.py` Streamlines the ET outputs into one file. Outputs a temperature heatmap, metadata file, 3D temperature distribution (.csv and .vti), GR and liquidus data, GR projection, GR map overlay, and microstructure projection. 
+
+microstructure/:
+- `GR_Map_test.py` Run this file to calculate GR maps with GR_Map.py. This file requires alloy data as input and can overlay liquidus GR points onto the GR map if provided in a csv.
+- `GR_Map.py` Code written by James Hanagan to calculate GR maps using TC-Python.
+- `GRFrom3D.py` Calculates thermal gradient (G) and solidification rate (R) given a .vti file, and outputs a csv.
+- `GRFromHeatmap.py` Calculates thermal gradient (G) and solidification rate (R) given a 2D ET temperature field. Mostly obsolete.
+- `PlotGR.py` Plots G and R as a melt pool projection. Requires a csv as input.
+- `PlotMicrostructure.py` Using a GR Map, classifies the microstructure of points along the liquidus and plots it as a melt pool projection. Uses GR_Map.py and requires a csv as input.
+
+Bayesian/:
+- `ET_prior.py` Given an excel file with alloy data, outputs a 3D temperature distribution and a temperature heatmap. This is the data used in the GPR.
+- `GPR.py` Given an ET 3D temperature distribution csv and a TCAM 3D temperature distribution csv, will learn the error in temperature between ET and TCAM at a number of training points and predicts the corrected melt pool. Outputs a csv that can be viewed in ParaView. Keep in mind that the TCAM data csv must be cropped in ParaView to the exact domain as the ET data.
+- `melt_geometry.py` Given the csv outputted by GPR.py, will print in the terminal the melt pool depth, width, and length for ET, TCAM, and Corrected melt pools. To run:
+   ```bash
+   python Bayesian/melt_geometry.py pathto.../matched_tcam_corrected_points.csv
+   ```
+- `PlotTempYZ.py` Can plot two melt pool temperature yz slices side by side. Requires temperature data from two different sources.
+
+Miscellaneous:
+- `PrintabilityMap_og.py` Uses old ET code to calculate melt pool geometry for large power-velocity spaces.
+- `PlotMeltDepth.py` Uses data from PrintabilityMap_og.py to generate a melt depth map as a function of power and velocity.
+- `PlotPrintabilityMap.py` Uses data from PrintabilityMap_og.py to generate a printability map.
+- `PrintabilityMap_ET.py` Uses eagar-tsai Python library to calculate printability maps.
+- `effective_heat_capacity.py` Old code to make calculations. Ignore.
+- `TCAM_solver.py` Work in progress to run many TCAM simulations with TC-Python.
+- `eagar_tsai_test.py` Used to run simple ET calculations for quick testing. Outputs a temperature heatmap.
+- `ETtoVTI.py` Creates only a .vti file from an ET run.
+- `ViewVTI.py` Views a .vti file to see 3D eagar-tsai temperature distribution.
+
+Data:
+- `effective_heat_capacity.xlsx` Actually important! This is where I have my updated alloy data using the TCHEA8 CALPHAD database. Includes boiling points and effective heat capacities using different methods. Still, happens to be the main source of data for the other scripts.
+- `et_custom_input_data.xlsx` Shortened version of et_input_data_example.xlsx to navigate easier. Not really used anymore.
+- `et_input_data_example.xlsx` Original refractory high entropy data sheet provided by Brent Vela. Uses TCHEA5 the CALPHAD database, so a little outdated compared to effective_heat_capacity.xlsx. 
+- `TCAM_solver_data.xlsx` Work in progress. Works in tandem with TCAM_solver.py.
+
+#
 # ET Model (Eagar–Tsai)
 
 This project implements the Eagar–Tsai moving heat source model to estimate melt pool dimensions for a scanning laser/beam over a semi‑infinite solid. The temperature field is computed from a 1D integral and evaluated numerically (optionally using a compiled C integrand for speed). Melt pool dimensions are extracted from the liquidus isotherm.

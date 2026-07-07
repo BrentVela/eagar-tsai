@@ -23,7 +23,7 @@ from tc_python import CompositionUnit
 
 
 DEFAULT_EXCEL = "effective_cp_data.xlsx"
-DEFAULT_ROW_INDEX = 2
+DEFAULT_ROW_INDEX = 2 # EXCEL ROW - 2
 DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V"]
 DEFAULT_CALC_ROOT = "CalcFiles/Bayesian_Data/New/ET/alloy0/250_0.5_5um"
 
