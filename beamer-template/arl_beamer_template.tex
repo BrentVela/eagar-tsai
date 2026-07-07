@@ -1,0 +1,191 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{pgfgantt}
+\usepackage{beamerthemeARLProposal}
+
+\title[Rapid Microstructure Prediction]{Rapid Microstructure Prediction in Laser Powder Bed Fusion Using Bayesian Updating of Eagar--Tsai Model}
+\subtitle{Concise subtitle for a Texas A\&M proposal, review, or technical talk}
+\author[Swartz, Vela, Arroyave, Sariturk]{Kyle Swartz, Brent Vela, Raymundo Arroyave, Doguhan Sariturk}
+\institute[TAMU]{Texas A\&M University}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Core Thesis}
+  \footnotesize
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.32\textwidth}
+      \begin{block}{Composition}
+        \centering
+        \includegraphics[width=\linewidth,height=0.28\textheight,keepaspectratio]{affine_projection_nimplex_nb_cr_v_w_zr_20pct_interior_clean2.png}
+
+        \vspace{0.25em}
+        \begin{itemize}
+          \item A 5-element affine projection represents the accessible composition simplex.
+          \item Interior coloring encodes local element content across the design space.
+          \item Bayesian updates narrow the search to feasible LPBF compositions.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \begin{block}{Solidification Condition}
+        \begin{itemize}
+          \item Process parameters determine thermal gradients, cooling rates, and melt-pool shape.
+          \item The Eagar--Tsai model provides fast temperature-field priors across the parameter space.
+          \item These fields define the local solidification path for each candidate build condition.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \begin{alertblock}{Solidified Microstructure}
+        \begin{itemize}
+          \item Microstructure emerges from the coupling of chemistry and thermal history.
+          \item Predicted G/R conditions map to expected grain morphology and phase selection.
+          \item The workflow targets rapid microstructure prediction from composition to final structure.
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Motivation and Constraints}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item Describe the external pressure, mission need, or scientific gap.
+        \item Name the constraints that make the problem nontrivial.
+        \item Explain why existing approaches are too slow, brittle, or expensive.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{block}{Technical gap}
+        Existing workflows still need stronger decision support across:
+        \begin{itemize}
+          \item sparse data,
+          \item competing objectives,
+          \item physics priors,
+          \item experiment risk.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Reusable Two-Column Layout}
+  \footnotesize
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \stage{Stage or category A}
+      \begin{itemize}
+        \item Use this side for requirements, assumptions, or process details.
+        \item Keep bullets short enough to read during a live talk.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \stage{Stage or category B}
+      \begin{itemize}
+        \item Mirror the structure on the left when comparison matters.
+        \item Use \texttt{\textbackslash deliverable\{\}} and \texttt{\textbackslash risk\{\}} for emphasis.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \vspace{0.35em}
+  \begin{block}{Downselection rule}
+    Reject options that fail the practical constraints, even if their isolated performance looks strong.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Gradient or Tradeoff Visual}
+  \centering
+  \ARLGradientLegend
+    {Example design gradient}
+    {aggiesky}
+    {aggiemaroonlight}
+    {High-temperature region}
+    {Structural region}
+    {Replace this annotation with the key takeaway for the figure.}
+\end{frame}
+
+\begin{frame}{Refractored ET Model}
+  \begin{block}{Core idea}
+    The refactored Eagar--Tsai workflow separates melt-pool prediction, 2D heatmap generation, and 3D temperature-field export into reusable steps.
+  \end{block}
+  \vspace{0.4em}
+  \begin{itemize}
+    \item Library-backed execution supports direct melt-pool evaluation from process and material inputs.
+    \item Temperature fields can be exported as both dense CSV volumes and VTI files for downstream analysis.
+    \item The workflow is structured for Bayesian correction, microstructure inference, and repeatable parameter studies.
+  \end{itemize}
+  \vspace{0.35em}
+  {\scriptsize\textcolor{black!70}{Note to self: add speedup results and refer to Dogu's JOS paper.}}
+\end{frame}
+
+\begin{frame}{ET Thermal Cross Sections}
+  \footnotesize
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../CalcFiles/temperature_fields/effective_cp_row2_250W_0.5ms_5um/ET_xy_heatmap_alloy2.png}
+
+      \vspace{0.25em}
+      {\scriptsize Built-in refactored ET solver heatmap at $z = 0$ for the 250 W, 0.5 m/s case.}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../CalcFiles/Test20/eagar_tsai_library/effective_cp_row2_250W_0.5ms_5um/temperature_field_alloy0_250W_0.5ms.png}
+
+      \vspace{0.25em}
+      {\scriptsize `eagar-tsai` Python library cross section for the same alloy and process condition.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Timeline}
+  \footnotesize
+  \resizebox{\textwidth}{!}{%
+    \begin{ganttchart}[
+        x unit=0.75cm,
+        y unit chart=0.55cm,
+        time slot format=isodate-yearmonth,
+        bar/.append style={fill=aggiemaroon},
+        bar height=0.5,
+        group/.append style={fill=aggiecharcoal},
+        group height=0.6,
+        milestone/.append style={fill=aggiegold},
+        hgrid,
+        vgrid
+      ]{2026-01}{2026-12}
+      \gantttitlecalendar{year, month=shortname} \\
+      \ganttgroup{Workstream 1}{2026-01}{2026-04} \\
+      \ganttbar{Model development}{2026-01}{2026-03} \\
+      \ganttbar{Baseline experiments}{2026-02}{2026-04} \\
+      \ganttgroup{Workstream 2}{2026-05}{2026-09} \\
+      \ganttbar{Optimization loop}{2026-05}{2026-08} \\
+      \ganttmilestone{Review gate}{2026-09} \\
+      \ganttgroup{Workstream 3}{2026-10}{2026-12} \\
+      \ganttbar{Prototype demonstration}{2026-10}{2026-12}
+    \end{ganttchart}%
+  }
+\end{frame}
+
+\begin{frame}{Closing}
+  \begin{block}{Takeaway}
+    End with the decision, ask, or technical conclusion you want the audience to remember.
+  \end{block}
+  \vspace{0.5em}
+  \begin{itemize}
+    \item \deliverable{Deliverable}: Name the concrete output.
+    \item \risk{Primary risk}: Name the hardest unresolved issue.
+    \item \stage{Immediate next step}: Name the action that starts now.
+  \end{itemize}
+\end{frame}
+
+\end{document}
