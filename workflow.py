@@ -25,7 +25,7 @@ from tc_python import CompositionUnit
 DEFAULT_EXCEL = "effective_cp_data.xlsx"
 DEFAULT_ROW_INDEX = 2 # EXCEL ROW - 2
 DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V"]
-DEFAULT_CALC_ROOT = "CalcFiles/Bayesian_Data/New/ET/alloy0/250_0.5_5um"
+DEFAULT_CALC_ROOT = "beamer-template/figures"
 
 DEFAULT_THERMO_DB = "TCHEA8"
 DEFAULT_KINETIC_DB = "MOBHEA3"
@@ -36,7 +36,7 @@ DEFAULT_DOMAIN = SimulationDomain(
     x_length_um=600.0,
     y_length_um=200.0,
     z_depth_um=250.0,
-    spatial_resolution_um=5.0,
+    spatial_resolution_um=1.0,
 )
 DEFAULT_VTI_LIMITS_UM = {
     "x": (-160.0, 380.0),

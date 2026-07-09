@@ -19,10 +19,10 @@ except ImportError:
 
 
 LIQUIDUS_CSV = (
-    "CalcFiles/Bayesian_Data/New/ET/alloy0/250_0.5_5um/250_0.5_workflow/liquidus_GR_alloy0_250_0.5.csv"
+    "CalcFiles/Bayesian_Data/New/TCAM/alloy0_250_0.5/GPR_outputs_5um/physics_based/GR_matched_points.csv"
 )
 OUTPUT_PATH = (
-    "CalcFiles/Bayesian_Data/New/ET/alloy0/250_0.5_5um/250_0.5_workflow/projected_microstructure_alloy0_250_0.5.png"
+    "CalcFiles/Bayesian_Data/New/TCAM/alloy0_250_0.5/GPR_outputs_5um/physics_based/microstructure_matched_points2.png"
 )
 INTERPOLATE_PARAVIEW = False
 INTERPOLATION_Y_POINTS = 75

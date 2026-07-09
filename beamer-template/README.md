@@ -2,6 +2,14 @@
 
 This template started from the presentation styling in `/home/vela/proj/arl/arl_fellowship_presentation.tex`, then was refit into a reusable Texas A\&M-themed deck with slide-specific content removed.
 
+## Figures
+**`TCAM.png`**
+
+- TCAM output: <path>
+- ParaView state file: <path>
+- Manual step: open `something.py`, load <dataset.csv>, export png
+
+
 ## Files
 
 - `arl_beamer_template.tex`: starter deck

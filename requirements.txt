@@ -1,0 +1,19 @@
+# Core scientific stack
+numpy
+pandas
+scipy
+matplotlib
+openpyxl
+
+# Modeling, optimization, and plotting helpers
+scikit-learn
+scikit-learn-extra
+joblib
+pyvista
+
+# Eagar-Tsai solver used by the ET workflow scripts.
+eagar-tsai
+
+# Not pip-installable from this file:
+# - tc_python: install through Thermo-Calc's Python SDK/license workflow.
+# - Tectonic: repo-local binary is currently in .tools/bin/tectonic.

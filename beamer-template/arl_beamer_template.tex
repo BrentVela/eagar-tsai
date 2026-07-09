@@ -1,15 +1,36 @@
-\documentclass[aspectratio=169,10pt]{beamer}
+\documentclass[aspectratio=169,11pt]{beamer}
+\geometry{paperwidth=13.333in,paperheight=7.5in}
 
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else
+  \usepackage{fontspec}
+  \setsansfont{Carlito}[
+    Path=../.tools/fonts/,
+    UprightFont=*-Regular.ttf,
+    BoldFont=*-Bold.ttf,
+    ItalicFont=*-Italic.ttf,
+    BoldItalicFont=*-BoldItalic.ttf
+  ]
+  \setmainfont{Carlito}[
+    Path=../.tools/fonts/,
+    UprightFont=*-Regular.ttf,
+    BoldFont=*-Bold.ttf,
+    ItalicFont=*-Italic.ttf,
+    BoldItalicFont=*-BoldItalic.ttf
+  ]
+  \setmonofont{DejaVu Sans Mono}[Scale=MatchLowercase]
+\fi
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{pgfgantt}
 \usepackage{beamerthemeARLProposal}
 
 \title[Rapid Microstructure Prediction]{Rapid Microstructure Prediction in Laser Powder Bed Fusion Using Bayesian Updating of Eagar--Tsai Model}
-\subtitle{Concise subtitle for a Texas A\&M proposal, review, or technical talk}
-\author[Swartz, Vela, Arroyave, Sariturk]{Kyle Swartz, Brent Vela, Raymundo Arroyave, Doguhan Sariturk}
+\subtitle{}
+\author[Swartz, Hanagan, Vela, Arróyave, Sarıtürk]{Kyle Swartz, James Hanagan, Brent Vela, Raymundo Arróyave, Doğuhan Sarıtürk}
 \institute[TAMU]{Texas A\&M University}
 \date{\today}
 
@@ -20,7 +41,6 @@
 \end{frame}
 
 \begin{frame}{Core Thesis}
-  \footnotesize
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.32\textwidth}
       \begin{block}{Composition}
@@ -60,19 +80,18 @@
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.52\textwidth}
       \begin{itemize}
-        \item Describe the external pressure, mission need, or scientific gap.
-        \item Name the constraints that make the problem nontrivial.
-        \item Explain why existing approaches are too slow, brittle, or expensive.
+        \item LPBF alloy design spans large composition--processing spaces.
+        \item Resulting microstructures depend on thermal gradients, $G$, and solidification rates, $R$.
+        \item Fast thermal models are needed for high-throughput screening before expensive simulations or experiments.
       \end{itemize}
     \end{column}
     \begin{column}{0.44\textwidth}
-      \begin{block}{Technical gap}
-        Existing workflows still need stronger decision support across:
+      \begin{block}{Key constraint}
+        The Eagar--Tsai model is fast enough for screening, but its simplified physics limits fidelity:
         \begin{itemize}
-          \item sparse data,
-          \item competing objectives,
-          \item physics priors,
-          \item experiment risk.
+          \item temperature-invariant properties,
+          \item analytical melt-pool assumptions,
+          \item reduced accuracy relative to FEM thermal simulations.
         \end{itemize}
       \end{block}
     \end{column}
@@ -80,7 +99,6 @@
 \end{frame}
 
 \begin{frame}{Reusable Two-Column Layout}
-  \footnotesize
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.48\textwidth}
       \stage{Stage or category A}
@@ -107,8 +125,8 @@
   \centering
   \ARLGradientLegend
     {Example design gradient}
-    {aggiesky}
-    {aggiemaroonlight}
+    {sffline}
+    {sffblue}
     {High-temperature region}
     {Structural region}
     {Replace this annotation with the key takeaway for the figure.}
@@ -125,55 +143,101 @@
     \item The workflow is structured for Bayesian correction, microstructure inference, and repeatable parameter studies.
   \end{itemize}
   \vspace{0.35em}
-  {\scriptsize\textcolor{black!70}{Note to self: add speedup results and refer to Dogu's JOS paper.}}
+  {\fontsize{15}{18}\selectfont\textcolor{black!70}{Note to self: add speedup results and refer to Dogu's JOS paper.}}
 \end{frame}
 
 \begin{frame}{ET Thermal Cross Sections}
-  \footnotesize
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.49\textwidth}
       \centering
-      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../CalcFiles/temperature_fields/effective_cp_row2_250W_0.5ms_5um/ET_xy_heatmap_alloy2.png}
+      \begin{minipage}[t][0.68\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/temperature_field_alloy0_250_0.5.png}
+      \end{minipage}
 
       \vspace{0.25em}
-      {\scriptsize Built-in refactored ET solver heatmap at $z = 0$ for the 250 W, 0.5 m/s case.}
+      {\fontsize{15}{18}\selectfont Temperature heatmap for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s. Top: $z = 0$ surface. Bottom: $y = 0$ cross section.}
     \end{column}
     \begin{column}{0.49\textwidth}
       \centering
-      \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../CalcFiles/Test20/eagar_tsai_library/effective_cp_row2_250W_0.5ms_5um/temperature_field_alloy0_250W_0.5ms.png}
+      \begin{minipage}[t][0.68\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/viewvti.png}
+      \end{minipage}
 
       \vspace{0.25em}
-      {\scriptsize `eagar-tsai` Python library cross section for the same alloy and process condition.}
+      {\fontsize{15}{18}\selectfont 3D view of the ET melt pool for the same alloy and process condition.}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{Timeline}
-  \footnotesize
-  \resizebox{\textwidth}{!}{%
-    \begin{ganttchart}[
-        x unit=0.75cm,
-        y unit chart=0.55cm,
-        time slot format=isodate-yearmonth,
-        bar/.append style={fill=aggiemaroon},
-        bar height=0.5,
-        group/.append style={fill=aggiecharcoal},
-        group height=0.6,
-        milestone/.append style={fill=aggiegold},
-        hgrid,
-        vgrid
-      ]{2026-01}{2026-12}
-      \gantttitlecalendar{year, month=shortname} \\
-      \ganttgroup{Workstream 1}{2026-01}{2026-04} \\
-      \ganttbar{Model development}{2026-01}{2026-03} \\
-      \ganttbar{Baseline experiments}{2026-02}{2026-04} \\
-      \ganttgroup{Workstream 2}{2026-05}{2026-09} \\
-      \ganttbar{Optimization loop}{2026-05}{2026-08} \\
-      \ganttmilestone{Review gate}{2026-09} \\
-      \ganttgroup{Workstream 3}{2026-10}{2026-12} \\
-      \ganttbar{Prototype demonstration}{2026-10}{2026-12}
-    \end{ganttchart}%
-  }
+\begin{frame}{ET Thermal Gradient and Solidification Rate}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \centering
+      \begin{minipage}[t][0.58\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/projected_GR_alloy0_250_0.5.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont Projection of $G$ and $R$ along the solidification front onto a $yz$ slice for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+    \end{column}
+    \begin{column}{0.08\textwidth}
+      \centering
+      \vspace{0.25\textheight}
+      \begin{tikzpicture}
+        \draw[->,line width=3.2pt,draw=black] (0,0) -- (0.85,0);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \centering
+      \begin{minipage}[t][0.58\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/GR_map.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont GR Map calculated with Thermo-Calc CET Property Model for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{ET Microstructure Classification}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \centering
+      \begin{minipage}[t][0.58\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/GR_map_overlay_alloy0_250_0.5.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont GR Map calculated with Thermo-Calc CET Property Model for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \centering
+      \begin{minipage}[t][0.58\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/projected_microstructure_alloy0_250_0.5.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont Projected microstructure classification along the solidification front onto a $yz$ slice for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Thermo-Calc AM Module}
+\end{frame}
+
+\begin{frame}{TCAM Thermal Cross Sections}
+\end{frame}
+
+\begin{frame}{TCAM Thermal Gradient and Solidification Rate}
+\end{frame}
+
+\begin{frame}{TCAM Microstructure Classification}
 \end{frame}
 
 \begin{frame}{Closing}

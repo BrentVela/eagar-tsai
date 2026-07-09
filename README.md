@@ -2,6 +2,21 @@
 
 This first section of the README details contributions by Kyle Swartz. To see the original Eagar-Tsai code implemented by Brent Vela, scroll past this section.
 
+## Setup
+
+Create and activate a virtual environment, then install the Python dependencies:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Some tools are not installed through `requirements.txt`:
+
+- `tc_python` comes from the Thermo-Calc Python SDK and requires a licensed Thermo-Calc installation.
+- The Beamer presentation currently uses the repo-local Tectonic binary at `.tools/bin/tectonic`.
+
 ## Scripts 
 
 Note: many of these files require you to hardcode the input and output file paths. Additionally, most ET functionality has been updated to use the [eagar-tsai Python library](https://arroyavelab.github.io/eagar-tsai).

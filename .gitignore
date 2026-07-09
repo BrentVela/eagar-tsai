@@ -13,3 +13,6 @@ CalcFiles/
 .vscode
 cache/
 TC_Python/
+.tools/bin/
+.tools/downloads/
+beamer-template/figures/
