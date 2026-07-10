@@ -28,11 +28,11 @@
 \usepackage{pgfgantt}
 \usepackage{beamerthemeARLProposal}
 
-\title[Rapid Microstructure Prediction]{Rapid Microstructure Prediction in Laser Powder Bed Fusion Using Bayesian Updating of Eagar--Tsai Model}
+\title[Rapid Microstructure Prediction]{Rapid Microstructure Prediction in Laser Powder Bed Fusion\\ Using Bayesian Updating of Eagar--Tsai Model}
 \subtitle{}
-\author[Swartz, Hanagan, Vela, Arróyave, Sarıtürk]{Kyle Swartz, James Hanagan, Brent Vela, Raymundo Arróyave, Doğuhan Sarıtürk}
-\institute[TAMU]{Texas A\&M University}
-\date{\today}
+\author[Swartz, Hanagan, Vela, Sarıtürk, Arróyave]{Kyle Swartz, James Hanagan, Brent Vela, Doğuhan Sarıtürk, Raymundo Arróyave}
+\institute[TAMU]{Department of Materials Science and Engineering, Texas A\&M University}
+\date{August 3, 2026}
 
 \begin{document}
 
@@ -98,38 +98,78 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{Reusable Two-Column Layout}
+\begin{frame}{Eagar--Tsai Model Foundation}
+  \vspace{-0.55em}
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.48\textwidth}
-      \stage{Stage or category A}
-      \begin{itemize}
-        \item Use this side for requirements, assumptions, or process details.
-        \item Keep bullets short enough to read during a live talk.
-      \end{itemize}
+    \begin{column}{0.49\textwidth}
+      \centering
+      {\fontsize{22}{26}\selectfont\textcolor{sffblue}{\textbf{Original Eagar--Tsai Paper}}\par}
+      \vspace{0.28em}
+
+      {\fontsize{15}{18}\selectfont Transient Gaussian moving heat source}
+      \vspace{0.35em}
+
+      \begin{minipage}[t][0.64\textheight][t]{\linewidth}
+        \begin{tikzpicture}[x=\linewidth,y=1cm]
+          \node[anchor=north east,inner sep=0pt] at (1.0,2.4) {
+            \includegraphics[width=0.50\linewidth]{../beamer-template/figures/eagar_tsai_og_figure.png}
+          };
+          \node[anchor=west,inner sep=0pt,text width=0.98\linewidth] at (0.0,3.05) {
+            {\fontsize{15}{18}\selectfont
+            \(\displaystyle
+            \begin{aligned}
+            T - T_0
+            &= \frac{1}{2}\int_{0}^{t} dT_i \\
+            &= \frac{q}{\pi\rho C_p\sqrt{4\pi\alpha}}
+            \int_{0}^{t}
+            \frac{(t-t')^{-1/2}}
+                 {2\alpha(t-t')+\sigma^2} \\
+            &\times
+            \exp\Bigg[
+            -\frac{(x-vt')^2+y^2}{4\alpha(t-t')+2\sigma^2}
+            -\frac{z^2}{4\alpha(t-t')}
+            \Bigg]\,dt'
+            \end{aligned}
+            \)
+            }
+          };
+          \path (0,0) rectangle (1,4.25);
+        \end{tikzpicture}
+        \vfill
+        {\fontsize{12.5}{15}\selectfont Eagar, T. W., \& Tsai, N. S. (1983). Temperature fields produced by traveling distributed heat sources. \textit{Welding Journal, 62}(12), 346--355.}
+      \end{minipage}
     \end{column}
-    \begin{column}{0.48\textwidth}
-      \stage{Stage or category B}
+    \begin{column}{0.02\textwidth}
+      \centering
+      \vspace{-0.15em}
+      \rule{0.5pt}{0.80\textheight}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \centering
+      {\fontsize{22}{26}\selectfont\textcolor{sffblue}{\textbf{Refactored Eagar--Tsai Model}}\par}
+      \vspace{0.18em}
+      {\fontsize{15}{18}\selectfont Python library implementation with compiled-C speedup\par}
+      \vspace{0.25em}
+
+      \begin{tikzpicture}[x=\linewidth,y=1cm]
+        \node[anchor=north,inner sep=0pt] at (0.37,-0.72) {
+          \includegraphics[width=0.66\linewidth]{../beamer-template/figures/dogu_figure_f.png}
+        };
+        \node[anchor=center,inner sep=0pt] at (0.82,-3.50) {
+          \includegraphics[width=0.23\linewidth]{../beamer-template/figures/logo.png}
+        };
+        \path (0,-4.45) rectangle (1,0);
+      \end{tikzpicture}
+      \vspace{0.05em}
+      {\raggedright
       \begin{itemize}
-        \item Mirror the structure on the left when comparison matters.
-        \item Use \texttt{\textbackslash deliverable\{\}} and \texttt{\textbackslash risk\{\}} for emphasis.
+        \item Uses the Rubenchik nondimensional integrand reformulation.
+        \item Compiled C integrand removes Python overhead inside QUADPACK.
+        \item Adds batch APIs, plotting, domain expansion, and field export.
       \end{itemize}
+      }
     \end{column}
   \end{columns}
-  \vspace{0.35em}
-  \begin{block}{Downselection rule}
-    Reject options that fail the practical constraints, even if their isolated performance looks strong.
-  \end{block}
-\end{frame}
-
-\begin{frame}{Gradient or Tradeoff Visual}
-  \centering
-  \ARLGradientLegend
-    {Example design gradient}
-    {sffline}
-    {sffblue}
-    {High-temperature region}
-    {Structural region}
-    {Replace this annotation with the key takeaway for the figure.}
 \end{frame}
 
 \begin{frame}{Refractored ET Model}
