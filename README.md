@@ -36,7 +36,7 @@ Bayesian/:
 - `GPR.py` Given an ET 3D temperature distribution csv and a TCAM 3D temperature distribution csv, will learn the error in temperature between ET and TCAM at a number of training points and predicts the corrected melt pool. Outputs a csv that can be viewed in ParaView. Keep in mind that the TCAM data csv must be cropped in ParaView to the exact domain as the ET data.
 - `melt_geometry.py` Given the csv outputted by GPR.py, will print in the terminal the melt pool depth, width, and length for ET, TCAM, and Corrected melt pools. To run:
    ```bash
-   python Bayesian/melt_geometry.py pathto.../matched_tcam_corrected_points.csv
+   python Bayesian/melt_geometry.py <pathto>/matched_tcam_corrected_points.csv
    ```
 - `PlotTempYZ.py` Can plot two melt pool temperature yz slices side by side. Requires temperature data from two different sources.
 

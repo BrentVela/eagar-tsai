@@ -163,27 +163,12 @@
       \vspace{0.05em}
       {\raggedright
       \begin{itemize}
-        \item Uses the Rubenchik nondimensional integrand reformulation.
-        \item Compiled C integrand removes Python overhead inside QUADPACK.
-        \item Adds batch APIs, plotting, domain expansion, and field export.
+        \item Separates melt-pool prediction, printability maps, 2D heatmap generation, and 3D temperature-field export into reusable steps.
+        \item Compiled C integrand removes Python overhead inside QUADPACK for faster parameter sweeps.
       \end{itemize}
       }
     \end{column}
   \end{columns}
-\end{frame}
-
-\begin{frame}{Refractored ET Model}
-  \begin{block}{Core idea}
-    The refactored Eagar--Tsai workflow separates melt-pool prediction, 2D heatmap generation, and 3D temperature-field export into reusable steps.
-  \end{block}
-  \vspace{0.4em}
-  \begin{itemize}
-    \item Library-backed execution supports direct melt-pool evaluation from process and material inputs.
-    \item Temperature fields can be exported as both dense CSV volumes and VTI files for downstream analysis.
-    \item The workflow is structured for Bayesian correction, microstructure inference, and repeatable parameter studies.
-  \end{itemize}
-  \vspace{0.35em}
-  {\fontsize{15}{18}\selectfont\textcolor{black!70}{Note to self: add speedup results and refer to Dogu's JOS paper.}}
 \end{frame}
 
 \begin{frame}{ET Thermal Cross Sections}
@@ -202,7 +187,7 @@
       \centering
       \begin{minipage}[t][0.68\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/viewvti.png}
+        \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.png}
       \end{minipage}
 
       \vspace{0.25em}
@@ -234,7 +219,7 @@
       \centering
       \begin{minipage}[t][0.58\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/GR_map.png}
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/GR_map_alloy0_250_0.5.png}
       \end{minipage}
 
       \vspace{0.25em}
@@ -249,11 +234,11 @@
       \centering
       \begin{minipage}[t][0.58\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/GR_map_overlay_alloy0_250_0.5.png}
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/GR_map_overlayET_alloy0_250_0.5.png}
       \end{minipage}
 
       \vspace{0.25em}
-      {\fontsize{15}{18}\selectfont GR Map calculated with Thermo-Calc CET Property Model for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+      {\fontsize{15}{18}\selectfont GR Map calculated with Thermo-Calc CET Property Model with overlaid GR liquidus points for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
     \end{column}
     \begin{column}{0.49\textwidth}
       \centering

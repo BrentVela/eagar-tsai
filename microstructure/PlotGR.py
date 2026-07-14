@@ -12,12 +12,8 @@ from scipy.ndimage import gaussian_filter
 from scipy.interpolate import griddata
 
 
-LIQUIDUS_CSV = (
-    "beamer-template/figures/250_0.5/liquidus_GR_alloy0_250_0.5.csv"
-)
-OUTPUT_PATH = (
-    "beamer-template/figures/250_0.5/projected_GR2_alloy0_250_0.5.png"
-)
+LIQUIDUS_CSV = ("beamer-template/figures/250_0.5/liquidus_GR_alloy0_250_0.5.csv")
+OUTPUT_PATH = ("beamer-template/figures/250_0.5/projected_GR_alloy0_250_0.5.png")
 INTERPOLATE_PARAVIEW = False
 INTERPOLATION_Y_POINTS = 75
 INTERPOLATION_Z_POINTS = 115
