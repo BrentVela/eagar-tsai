@@ -93,6 +93,6 @@
   "evaporateTemperature": 5792.90146201586,
   "mainFileName": "result.e",
   "number": -1,
-  "expWidth": NaN,
-  "expDepth": NaN
+  "expWidth": "NaN",
+  "expDepth": "NaN"
 }
