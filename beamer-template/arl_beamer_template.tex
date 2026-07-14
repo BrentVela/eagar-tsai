@@ -230,7 +230,7 @@
 
 \begin{frame}{ET Microstructure Classification}
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.49\textwidth}
+    \begin{column}{0.45\textwidth}
       \centering
       \begin{minipage}[t][0.58\textheight][c]{\linewidth}
         \centering
@@ -240,7 +240,14 @@
       \vspace{0.25em}
       {\fontsize{15}{18}\selectfont GR Map calculated with Thermo-Calc CET Property Model with overlaid GR liquidus points for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
     \end{column}
-    \begin{column}{0.49\textwidth}
+    \begin{column}{0.08\textwidth}
+      \centering
+      \vspace{0.25\textheight}
+      \begin{tikzpicture}
+        \draw[->,line width=3.2pt,draw=black] (0,0) -- (0.85,0);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.45\textwidth}
       \centering
       \begin{minipage}[t][0.58\textheight][c]{\linewidth}
         \centering
@@ -254,15 +261,115 @@
 \end{frame}
 
 \begin{frame}{Thermo-Calc AM Module}
-\end{frame}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.58\textwidth}
+      \centering
+      \begin{minipage}[t][0.67\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.67\textheight,keepaspectratio]{../beamer-template/figures/TCAM/TCAM_alloy0_250_0.5.png}
+      \end{minipage}
 
-\begin{frame}{TCAM Thermal Cross Sections}
+      \vspace{0.2em}
+      {\fontsize{14}{17}\selectfont Steady-state TCAM simulation for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{block}{Higher-Fidelity Thermal Reference}
+        \begin{itemize}
+          \item Composition-specific, temperature-dependent properties from TCHEA8 and Scheil calculations.
+          \item Provides Marangoni-flow and keyholing modes, with evaporation, radiation, and convection.
+          \item Matched composition, power, velocity, and beam dimensions enable direct comparison with Eagar--Tsai.
+        \end{itemize}
+      \end{block}
+
+      \vspace{-0.25em}
+      \begin{block}{Outputs Used in This Work}
+        \begin{itemize}
+          \item 3D temperature field and melt-pool geometry
+          \item $G$ and $R$ from downstream post-processing
+        \end{itemize}
+      \end{block}
+
+      \vspace{-0.25em}
+      \begin{alertblock}{Role in Bayesian Updating}
+        \centering
+        $\displaystyle
+        T_{\mathrm{corrected}}
+        = T_{\mathrm{ET}}
+        + \widehat{\left(T_{\mathrm{TCAM}}-T_{\mathrm{ET}}\right)}$
+
+        \vspace{0.35em}
+        {\raggedright\fontsize{13.5}{16}\selectfont TCAM supplies sparse reference data used to learn and correct the ET discrepancy.\par}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \begin{frame}{TCAM Thermal Gradient and Solidification Rate}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \centering
+      \vspace{-1.35em}
+      \begin{minipage}[t][0.72\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{../beamer-template/figures/TCAM/TCAM_projected_GR_alloy0_250_0.5.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      \hspace*{1.6em}\begin{minipage}{0.93\linewidth}
+        {\fontsize{15}{18}\selectfont TCAM projection of $G$ and $R$ along the solidification front onto a $yz$ slice for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+      \end{minipage}
+    \end{column}
+    \begin{column}{0.08\textwidth}
+      \centering
+      \vspace{0.25\textheight}
+      \begin{tikzpicture}
+        \draw[->,line width=3.2pt,draw=black] (0,0) -- (0.85,0);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \centering
+      \vspace{-1.35em}
+      \begin{minipage}[t][0.72\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/GR_map_alloy0_250_0.5.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont GR Map calculated with the Thermo-Calc CET Property Model for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \begin{frame}{TCAM Microstructure Classification}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \centering
+      \begin{minipage}[t][0.65\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/TCAM/GR_map_overlayET_TCAM_alloy0_250_0.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont GR map with TCAM and Eagar--Tsai liquidus-boundary conditions overlaid for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+    \end{column}
+    \begin{column}{0.08\textwidth}
+      \centering
+      \vspace{0.25\textheight}
+      \begin{tikzpicture}
+        \draw[->,line width=3.2pt,draw=black] (0,0) -- (0.85,0);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \centering
+      \begin{minipage}[t][0.65\textheight][c]{\linewidth}
+        \centering
+        \hspace*{-0.8em}\includegraphics[width=\linewidth,height=0.65\textheight,keepaspectratio]{../beamer-template/figures/TCAM/TCAM_projected_microstructure_alloy0_250_0.5.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont TCAM-derived microstructure classification projected along the solidification front onto a $yz$ slice for the same alloy and process condition.}
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \begin{frame}{Closing}

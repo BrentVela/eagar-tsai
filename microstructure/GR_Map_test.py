@@ -13,9 +13,9 @@ thermo_db = "TCHEA8"
 kinetic_db = "MOBHEA3"
 primary_phase = "BCC_B2"
 interfacial_energy = 0.5
-output_path = "beamer-template/figures/250_0.5/GR_map.png"
-include_overlay = False
-include_corrected_overlay = True
+output_path = "beamer-template/figures/TCAM/GR_map_overlayET_TCAM_alloy0_250_0.png"
+include_overlay = True
+include_corrected_overlay = False
 show_cet_lines = False
 # TCAM ON TOP OF ET
 # overlay_csv = [
@@ -34,25 +34,19 @@ overlay_label = None
 overlay_kwargs = None
 
 if include_overlay:
-    overlay_csv = [REPO_ROOT / "CalcFiles/Bayesian_Data/New/TCAM/alloy0_250_0.5/subdivide_data.csv"]
+    overlay_csv = [REPO_ROOT / "beamer-template/figures/data/TCAM_GR_alloy0_250_0.csv"]
     overlay_label = ["TCAM liquidus boundary"]
     overlay_kwargs = [
         {"c": "lime", "s": 3, "alpha": 0.1},
     ]
 
 if include_overlay and include_corrected_overlay:
-    overlay_csv.append(
-        REPO_ROOT
-        / "CalcFiles/Bayesian_Data/New/TCAM/alloy0_250_0.5/GPR_outputs_5um/physics_based/GR_matched_points.csv"
-    )
+    overlay_csv.append(REPO_ROOT / "CalcFiles/Bayesian_Data/New/TCAM/alloy0_250_0.5/GPR_outputs_5um/physics_based/GR_matched_points.csv")
     overlay_label.append("Corrected liquidus points")
     overlay_kwargs.append({"c": "deepskyblue", "s": 3, "alpha": 0.1})
 
 if include_overlay:
-    overlay_csv.append(
-        REPO_ROOT
-        / "CalcFiles/Bayesian_Data/New/ET/alloy0/250_0.5_5um/250_0.5_workflow/liquidus_GR_alloy0_250_0.5.csv"
-    )
+    overlay_csv.append(REPO_ROOT / "beamer-template/figures/250_0.5/liquidus_GR_alloy0_250_0.5.csv")
     overlay_label.append("ET liquidus boundary")
     overlay_kwargs.append({"c": "gold", "s": 4, "alpha": 0.35})
 
