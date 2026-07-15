@@ -25,7 +25,7 @@ from tc_python import CompositionUnit
 DEFAULT_EXCEL = "effective_cp_data.xlsx"
 DEFAULT_ROW_INDEX = 2 # EXCEL ROW - 2
 DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V"]
-DEFAULT_CALC_ROOT = "beamer-template/figures"
+DEFAULT_CALC_ROOT = "beamer-template/figures2"
 
 DEFAULT_THERMO_DB = "TCHEA8"
 DEFAULT_KINETIC_DB = "MOBHEA3"
@@ -36,7 +36,7 @@ DEFAULT_DOMAIN = SimulationDomain(
     x_length_um=600.0,
     y_length_um=200.0,
     z_depth_um=250.0,
-    spatial_resolution_um=1.0,
+    spatial_resolution_um=2.0,
 )
 DEFAULT_VTI_LIMITS_UM = {
     "x": (-160.0, 380.0),
@@ -193,10 +193,11 @@ def run_workflow(args):
     vti_path = output_dir / f"ET_3D_temperature_{stem}.vti"
     meta_path = output_dir / f"ET_meta_{stem}.csv"
     liquidus_csv = output_dir / f"liquidus_GR_{stem}.csv"
-    gr_map_png = output_dir / f"GR_map_overlay_{stem}.png"
+    gr_map_png = output_dir / f"GR_map_overlayET_{stem}.png"
     projected_png = output_dir / f"projected_microstructure_{stem}.png"
     gr_projected_png = output_dir / f"projected_GR_{stem}.png"
     temperature_png = output_dir / f"temperature_field_{stem}.png"
+    temperature_3d_png = output_dir / f"ET_3D_temperature_{stem}.png"
 
     print("Running Eagar-Tsai melt pool calculation...")
     result = compute_melt_pool(
@@ -234,10 +235,12 @@ def run_workflow(args):
     print("Exporting 3D temperature VTI...")
     export_eagar_tsai_vti(
         output_vti=vti_path,
+        output_png=temperature_3d_png,
         power_w=float(process_df.loc[0, "power_w"]),
         scan_speed_m_s=float(process_df.loc[0, "velocity_m_s"]),
         beam_diameter_m=float(process_df.loc[0, "beam_diameter_m"]),
         absorptivity=float(process_df.loc[0, "absorptivity"]),
+        liquidus_temperature_k=float(process_df.loc[0, "liquidus_temperature_k"]),
         thermal_conductivity_w_mk=float(process_df.loc[0, "thermal_conductivity_w_mk"]),
         density_kg_m3=float(process_df.loc[0, "density_kg_m3"]),
         heat_capacity_j_kgk=float(process_df.loc[0, "specific_heat_j_kgk"]),
@@ -245,8 +248,12 @@ def run_workflow(args):
         y_limits_um=vti_limits_um["y"],
         z_limits_um=vti_limits_um["z"],
         spatial_res_um=args.vti_resolution_um,
+        workers=args.workers,
+        chunk_size=args.chunk_size,
+        mirror_y=False,
     )
     print(f"Wrote {vti_path}")
+    print(f"Wrote {temperature_3d_png}")
 
     print("Extracting liquidus G/R from VTI...")
     _, _, _, liquidus_df = compute_gr_from_vti(
@@ -304,6 +311,7 @@ def run_workflow(args):
         "et_csv": et_csv,
         "meta_csv": meta_path,
         "vti": vti_path,
+        "temperature_3d_png": temperature_3d_png,
         "liquidus_csv": liquidus_csv,
         "gr_map_png": gr_map_png,
         "projected_png": projected_png,
@@ -328,7 +336,7 @@ def parse_args():
     parser.add_argument("--primary-phase", default=DEFAULT_PRIMARY_PHASE)
     parser.add_argument("--interfacial-energy", type=float, default=DEFAULT_INTERFACIAL_ENERGY)
     parser.add_argument("--disable-tc-cache", action="store_true")
-    parser.add_argument("--gr-legend-loc", default="upper center")
+    parser.add_argument("--gr-legend-loc", default="upper left")
     return parser.parse_args()
 
 

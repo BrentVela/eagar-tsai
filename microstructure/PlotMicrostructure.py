@@ -18,12 +18,8 @@ except ImportError:
     from GR_Map import _load_alloy_from_excel, _tc_python_cache_dir, get_CET_grid
 
 
-LIQUIDUS_CSV = (
-    "CalcFiles/Bayesian_Data/New/TCAM/alloy0_250_0.5/GPR_outputs_5um/physics_based/GR_matched_points.csv"
-)
-OUTPUT_PATH = (
-    "CalcFiles/Bayesian_Data/New/TCAM/alloy0_250_0.5/GPR_outputs_5um/physics_based/microstructure_matched_points2.png"
-)
+LIQUIDUS_CSV = ("beamer-template/figures/data/TCAM_GR_alloy0_250_0.csv")
+OUTPUT_PATH = ("beamer-template/figures/TCAM/TCAM_projected_microstructure_alloy0_250_0.5.png")
 INTERPOLATE_PARAVIEW = False
 INTERPOLATION_Y_POINTS = 75
 INTERPOLATION_Z_POINTS = 115

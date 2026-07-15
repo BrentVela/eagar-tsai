@@ -1,110 +1,212 @@
-import ctypes
+import argparse
 import os
-import os.path as path
-import sys
+from pathlib import Path
 
+os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
+
+import pandas as pd
 import numpy as np
-import pyvista as pv
-import scipy.version
-from scipy.integrate import quad
+
+from eagar_tsai import (
+    BeamParameters,
+    MaterialProperties,
+    SimulationDomain,
+    compute_melt_pool,
+    compute_temperature_volume,
+)
+
+DEFAULT_EXCEL = "effective_cp_data.xlsx"
+DEFAULT_ROW_INDEX = 2 # EXCEL ROW - 2
+DEFAULT_OUTPUT_VTI = "beamer-template/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.vti"
+DEFAULT_OUTPUT_PNG = "beamer-template/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.png"
+DEFAULT_LIMITS_UM = {
+    "x": (-160.0, 380.0),
+    "y": (0.0, 200.0),
+    "z": (-60.0, 0.0),
+}
+DEFAULT_MELT_POOL_DOMAIN = SimulationDomain(
+    x_length_um=600.0,
+    y_length_um=200.0,
+    z_depth_um=250.0,
+    spatial_resolution_um=2.0,
+)
+DEFAULT_VTI_PADDING_UM = 20.0
+
+INPUT_COLUMNS = {
+    "scan_speed_m_s": ["velocity_m_s", "Velocity_m/s", "Velocity (m/s)", "v"],
+    "power_w": ["power_w", "Power", "Power (W)", "P"],
+    "beam_diameter_m": ["beam_diameter_m", "Beam_diameter_m", "Beam Diam (m)"],
+    "absorptivity": ["absorptivity", "Absorptivity"],
+    "liquidus_temperature_k": ["liquidus_temperature_k", "Liquidus (K)", "TL", "PROP LT (K)"],
+    "thermal_conductivity_w_mk": [
+        "thermal_conductivity_w_mk",
+        "THCD LT (W/mK)",
+        "K_LT",
+        "PROP LT THCD (W/(mK))",
+        "EQ LT THCD (W/mK)",
+    ],
+    "density_kg_m3": ["density_kg_m3", "RT Density (kg/m3)", "PROP RT Density (kg/m3)"],
+    "heat_capacity_j_kgk": [
+        "Cp, Sheikh (J/kgK)",
+        "Cp, LT (J/kgK)",
+        "Cp_LT",
+        "PROP LT C (J/(kg K))",
+    ],
+}
 
 
-def eagar_tsai_integrand(t, x, y, z, p):
-    intpre = 1.0 / ((4 * p * t + 1) * np.sqrt(t))
-    intexp = (-(z**2) / (4 * t)) - (((y**2) + (x - t) ** 2) / (4 * p * t + 1))
-    return intpre * np.exp(intexp)
+def _first_existing(row, candidates, output_name):
+    for col in candidates:
+        if col in row.index and not pd.isna(row[col]):
+            return float(row[col])
+    raise ValueError(f"Excel row is missing a value for {output_name}. Tried: {candidates}")
 
 
-def _get_libpath():
-    sci_ver = scipy.version.version.split(".")
-    os_type = sys.platform
-
-    if int(sci_ver[1]) >= 1:
-        if os_type == "darwin":
-            return "libeagar_tsai_integrand.dylib"
-        if os_type.startswith("linux"):
-            return "./libeagar_tsai_integrand.so"
-        if os_type in ("win32", "cygwin", "msys"):
-            return "libeagar_tsai_integrand.dll"
-    return None
+def load_eagar_tsai_inputs_from_excel(excel_path=DEFAULT_EXCEL, row_index=DEFAULT_ROW_INDEX):
+    """Load process and material properties for one alloy/condition row."""
+    df = pd.read_excel(excel_path)
+    row = df.iloc[int(row_index)]
+    return {
+        output_name: _first_existing(row, candidates, output_name)
+        for output_name, candidates in INPUT_COLUMNS.items()
+    }
 
 
-def _load_integrand():
-    libpath = _get_libpath()
-    if not libpath or not path.exists(libpath):
-        return eagar_tsai_integrand
-
-    lib = ctypes.CDLL(libpath)
-    func = lib.eagar_tsai_integrand
-    func.restype = ctypes.c_double
-    func.argtypes = (ctypes.c_int, ctypes.c_double)
-    return func
-
-
-def _axis_range_um(axis_limits_um, spatial_res_um):
-    axis_min, axis_max = axis_limits_um
-    n_points = int(np.round(abs(axis_max - axis_min) / spatial_res_um)) + 1
-    return np.linspace(axis_min, axis_max, n_points)
+def _domain_from_limits(x_limits_um, y_limits_um, z_limits_um, spatial_res_um):
+    """Convert legacy explicit limits to the library's positive domain sizes."""
+    x_length_um = max(float(x_limits_um[1]), abs(float(x_limits_um[0])))
+    y_length_um = max(abs(float(y_limits_um[0])), abs(float(y_limits_um[1])))
+    z_depth_um = max(abs(float(z_limits_um[0])), abs(float(z_limits_um[1])))
+    return SimulationDomain(
+        x_length_um=x_length_um,
+        y_length_um=y_length_um,
+        z_depth_um=z_depth_um,
+        spatial_resolution_um=float(spatial_res_um),
+    )
 
 
-def _temperature_volume(
+def _inputs_to_melt_pool_dataframe(inputs):
+    """Build the column names expected by eagar_tsai.compute_melt_pool."""
+    return pd.DataFrame(
+        [
+            {
+                "velocity_m_s": inputs["scan_speed_m_s"],
+                "power_w": inputs["power_w"],
+                "beam_diameter_m": inputs["beam_diameter_m"],
+                "absorptivity": inputs["absorptivity"],
+                "liquidus_temperature_k": inputs["liquidus_temperature_k"],
+                "thermal_conductivity_w_mk": inputs["thermal_conductivity_w_mk"],
+                "density_kg_m3": inputs["density_kg_m3"],
+                "specific_heat_j_kgk": inputs["heat_capacity_j_kgk"],
+            }
+        ]
+    )
+
+
+def _expanded_vti_limits(result, padding_um):
+    """Match workflow.py's melt-pool-based VTI domain expansion."""
+    row = result.iloc[0]
+    melt_length_um = float(row["melt_length_um"])
+    melt_width_um = float(row["melt_width_um"])
+    melt_depth_um = float(row["melt_depth_um"])
+
+    x_min, x_max = DEFAULT_LIMITS_UM["x"]
+    y_min, y_max = DEFAULT_LIMITS_UM["y"]
+    z_min, z_max = DEFAULT_LIMITS_UM["z"]
+
+    return {
+        "x": (x_min, max(x_max, melt_length_um + padding_um)),
+        "y": (y_min, max(y_max, 0.5 * melt_width_um + padding_um)),
+        "z": (min(z_min, -(melt_depth_um + padding_um)), z_max),
+    }
+
+
+def workflow_vti_limits_from_inputs(inputs, padding_um, workers=None, chunk_size=10):
+    """Compute workflow-style VTI limits from one ET input row."""
+    result = compute_melt_pool(
+        _inputs_to_melt_pool_dataframe(inputs),
+        domain=DEFAULT_MELT_POOL_DOMAIN,
+        workers=workers,
+        chunk_size=chunk_size,
+        output_dir=None,
+        return_field=False,
+    )
+    return _expanded_vti_limits(result, float(padding_um))
+
+
+def _trim_render_whitespace(fig, padding_px=18, white_threshold=248):
+    """Trim white padding from the PyVista screenshot embedded in the figure."""
+    if not fig.axes or not fig.axes[0].images:
+        return
+
+    image_ax = fig.axes[0]
+    image = image_ax.images[0]
+    arr = np.asarray(image.get_array())
+    if arr.ndim < 3 or arr.shape[0] == 0 or arr.shape[1] == 0:
+        return
+
+    rgb = arr[..., :3]
+    nonwhite = np.any(rgb < white_threshold, axis=2)
+    rows = np.flatnonzero(np.any(nonwhite, axis=1))
+    cols = np.flatnonzero(np.any(nonwhite, axis=0))
+    if rows.size == 0 or cols.size == 0:
+        return
+
+    y0 = max(int(rows[0]) - padding_px, 0)
+    y1 = min(int(rows[-1]) + padding_px + 1, arr.shape[0])
+    x0 = max(int(cols[0]) - padding_px, 0)
+    x1 = min(int(cols[-1]) + padding_px + 1, arr.shape[1])
+    cropped = arr[y0:y1, x0:x1]
+
+    image.set_data(cropped)
+    image.set_extent((0, cropped.shape[1], cropped.shape[0], 0))
+    image_ax.set_xlim(0, cropped.shape[1])
+    image_ax.set_ylim(cropped.shape[0], 0)
+
+
+def compute_eagar_tsai_volume(
     power_w,
     scan_speed_m_s,
     beam_diameter_m,
     absorptivity,
+    liquidus_temperature_k,
     thermal_conductivity_w_mk,
     density_kg_m3,
     heat_capacity_j_kgk,
-    x_um,
-    y_um,
-    z_um,
+    x_limits_um,
+    y_limits_um,
+    z_limits_um,
+    spatial_res_um=1.0,
+    workers=None,
+    chunk_size=10,
 ):
-    alpha = thermal_conductivity_w_mk / (density_kg_m3 * heat_capacity_j_kgk)
-    sigma = np.sqrt(2.0) * (beam_diameter_m / 2.0)
+    """Compute a 3-D Eagar-Tsai temperature volume using the eagar_tsai library.
 
-    t0 = 300.0
-    ts = (absorptivity * power_w) / (
-        np.pi
-        * (thermal_conductivity_w_mk / alpha)
-        * np.sqrt(np.pi * alpha * scan_speed_m_s * (sigma**3))
+    The older workflow accepted explicit x/y/z limits. The eagar_tsai library
+    uses positive domain sizes and automatically expands if the melt pool
+    touches a boundary, so the limits are interpreted as the minimum starting
+    domain needed to cover the requested extents.
+    """
+    beam = BeamParameters(
+        beam_diameter=float(beam_diameter_m),
+        power=float(power_w),
+        velocity=float(scan_speed_m_s),
+        absorptivity=float(absorptivity),
     )
-    p = alpha / (scan_speed_m_s * sigma)
-    z_scale = np.sqrt((alpha * sigma) / scan_speed_m_s)
-    func = _load_integrand()
-
-    x_m = x_um * 1.0e-6
-    y_m = y_um * 1.0e-6
-    z_m = z_um * 1.0e-6
-
-    tvolume = np.zeros((x_um.size, y_um.size, z_um.size), dtype="f8")
-    for ix, x_val_m in enumerate(x_m):
-        x = x_val_m / sigma
-        for iy, y_val_m in enumerate(y_m):
-            y = y_val_m / sigma
-            for iz, z_val_m in enumerate(z_m):
-                z = z_val_m / z_scale
-                integral, _ = quad(func, 0.0, np.inf, args=(x, y, z, p))
-                tvolume[ix, iy, iz] = t0 + ts * integral
-
-    return tvolume
-
-
-def _save_vti(output_vti, x_um, y_um, z_um, temperature_k):
-    output_vti = path.abspath(output_vti)
-    os.makedirs(path.dirname(output_vti), exist_ok=True)
-
-    dx = float(x_um[1] - x_um[0]) if x_um.size > 1 else 1.0
-    dy = float(y_um[1] - y_um[0]) if y_um.size > 1 else 1.0
-    dz = float(z_um[1] - z_um[0]) if z_um.size > 1 else 1.0
-
-    grid = pv.ImageData(
-        dimensions=(x_um.size, y_um.size, z_um.size),
-        spacing=(dx, dy, dz),
-        origin=(float(x_um[0]), float(y_um[0]), float(z_um[0])),
+    material = MaterialProperties(
+        liquidus_temperature=float(liquidus_temperature_k),
+        thermal_conductivity=float(thermal_conductivity_w_mk),
+        density=float(density_kg_m3),
+        specific_heat=float(heat_capacity_j_kgk),
     )
-    grid.point_data["Temperature_K"] = np.ascontiguousarray(temperature_k).ravel(order="F")
-    grid.save(output_vti)
-    return output_vti
+    domain = _domain_from_limits(x_limits_um, y_limits_um, z_limits_um, spatial_res_um)
+    return compute_temperature_volume(
+        beam=beam,
+        material=material,
+        domain=domain,
+        workers=workers,
+        chunk_size=chunk_size,
+    )
 
 
 def export_eagar_tsai_vti(
@@ -120,39 +222,175 @@ def export_eagar_tsai_vti(
     y_limits_um,
     z_limits_um,
     spatial_res_um=1.0,
+    liquidus_temperature_k=None,
+    output_png=None,
+    workers=None,
+    chunk_size=10,
+    mirror_y=False,
+    colorbar_gap=0.002,
+    trim_render_whitespace=True,
+    render_padding_px=18,
 ):
-    x_um = _axis_range_um(x_limits_um, spatial_res_um)
-    y_um = _axis_range_um(y_limits_um, spatial_res_um)
-    z_um = _axis_range_um(z_limits_um, spatial_res_um)
+    """Compute and export an Eagar-Tsai 3-D temperature volume.
 
-    temperature_k = _temperature_volume(
+    Args:
+        output_vti: Path to the VTI file to write.
+        output_png: Optional path to a PyVista-rendered image of the volume.
+        mirror_y: When ``True``, export/render the full symmetric melt pool.
+            The workflow keeps this ``False`` for VTI output to match the
+            previous half-domain convention used by downstream G/R extraction.
+    """
+    if liquidus_temperature_k is None:
+        raise ValueError("liquidus_temperature_k is required for library-backed VTI export.")
+
+    volume = compute_eagar_tsai_volume(
         power_w=power_w,
         scan_speed_m_s=scan_speed_m_s,
         beam_diameter_m=beam_diameter_m,
         absorptivity=absorptivity,
+        liquidus_temperature_k=liquidus_temperature_k,
         thermal_conductivity_w_mk=thermal_conductivity_w_mk,
         density_kg_m3=density_kg_m3,
         heat_capacity_j_kgk=heat_capacity_j_kgk,
-        x_um=x_um,
-        y_um=y_um,
-        z_um=z_um,
+        x_limits_um=x_limits_um,
+        y_limits_um=y_limits_um,
+        z_limits_um=z_limits_um,
+        spatial_res_um=spatial_res_um,
+        workers=workers,
+        chunk_size=chunk_size,
     )
-    return _save_vti(output_vti, x_um, y_um, z_um, temperature_k)
+
+    output_vti = Path(output_vti)
+    vti_path = volume.export_vti(output_vti, mirror_y=mirror_y)
+
+    png_path = None
+    if output_png is not None:
+        png_path = Path(output_png)
+        png_path.parent.mkdir(parents=True, exist_ok=True)
+        fig = volume.plot_3d(mirror_y=True, liquidus_contour=True)
+        if trim_render_whitespace:
+            _trim_render_whitespace(fig, padding_px=int(render_padding_px))
+        if colorbar_gap is not None and len(fig.axes) >= 2:
+            image_ax, colorbar_ax = fig.axes[:2]
+            image_pos = image_ax.get_position()
+            colorbar_pos = colorbar_ax.get_position()
+            colorbar_ax.set_position(
+                [
+                    colorbar_pos.x0,
+                    image_pos.y0 - float(colorbar_gap) - colorbar_pos.height,
+                    colorbar_pos.width,
+                    colorbar_pos.height,
+                ]
+            )
+        fig.savefig(png_path, bbox_inches="tight")
+
+    return vti_path if png_path is None else (vti_path, png_path)
+
+
+def export_eagar_tsai_vti_from_excel(
+    excel_path=DEFAULT_EXCEL,
+    row_index=DEFAULT_ROW_INDEX,
+    output_vti=DEFAULT_OUTPUT_VTI,
+    output_png=DEFAULT_OUTPUT_PNG,
+    x_limits_um=DEFAULT_LIMITS_UM["x"],
+    y_limits_um=DEFAULT_LIMITS_UM["y"],
+    z_limits_um=DEFAULT_LIMITS_UM["z"],
+    spatial_res_um=1.0,
+    workers=None,
+    chunk_size=10,
+    mirror_y=False,
+    auto_vti_limits=True,
+    vti_padding_um=DEFAULT_VTI_PADDING_UM,
+    colorbar_gap=0.002,
+    trim_render_whitespace=True,
+    render_padding_px=18,
+):
+    """Load one spreadsheet row and export ET 3-D VTI/PNG outputs."""
+    inputs = load_eagar_tsai_inputs_from_excel(excel_path, row_index)
+    if auto_vti_limits:
+        limits = workflow_vti_limits_from_inputs(
+            inputs,
+            padding_um=vti_padding_um,
+            workers=workers,
+            chunk_size=chunk_size,
+        )
+        x_limits_um = limits["x"]
+        y_limits_um = limits["y"]
+        z_limits_um = limits["z"]
+        print(
+            "Using workflow VTI limits: "
+            f"x={x_limits_um} um, y={y_limits_um} um, z={z_limits_um} um"
+        )
+
+    return export_eagar_tsai_vti(
+        output_vti=output_vti,
+        output_png=output_png,
+        x_limits_um=x_limits_um,
+        y_limits_um=y_limits_um,
+        z_limits_um=z_limits_um,
+        spatial_res_um=spatial_res_um,
+        workers=workers,
+        chunk_size=chunk_size,
+        mirror_y=mirror_y,
+        colorbar_gap=colorbar_gap,
+        trim_render_whitespace=trim_render_whitespace,
+        render_padding_px=render_padding_px,
+        **inputs,
+    )
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Export an Eagar-Tsai 3-D temperature VTI from an Excel row.")
+    parser.add_argument("--excel", default=DEFAULT_EXCEL)
+    parser.add_argument("--row-index", type=int, default=DEFAULT_ROW_INDEX, help="Zero-based pandas row index.")
+    parser.add_argument("--output-vti", default=DEFAULT_OUTPUT_VTI)
+    parser.add_argument("--output-png", default=DEFAULT_OUTPUT_PNG)
+    parser.add_argument("--x-limits-um", nargs=2, type=float, default=DEFAULT_LIMITS_UM["x"])
+    parser.add_argument("--y-limits-um", nargs=2, type=float, default=DEFAULT_LIMITS_UM["y"])
+    parser.add_argument("--z-limits-um", nargs=2, type=float, default=DEFAULT_LIMITS_UM["z"])
+    parser.add_argument("--spatial-res-um", type=float, default=1.0)
+    parser.add_argument("--workers", type=int, default=-1)
+    parser.add_argument("--chunk-size", type=int, default=10)
+    parser.add_argument("--mirror-y", action="store_true")
+    parser.add_argument(
+        "--no-auto-vti-limits",
+        action="store_true",
+        help="Use the explicit axis limits instead of workflow-style melt-pool-expanded limits.",
+    )
+    parser.add_argument("--vti-padding-um", type=float, default=DEFAULT_VTI_PADDING_UM)
+    parser.add_argument(
+        "--colorbar-gap",
+        type=float,
+        default=0.002,
+        help="Normalized figure-coordinate gap between the 3D render and colorbar.",
+    )
+    parser.add_argument("--no-trim-render-whitespace", action="store_true")
+    parser.add_argument("--render-padding-px", type=int, default=18)
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
-    vti_path = export_eagar_tsai_vti(
-        output_vti="CalcFiles/Test16/125_0.2/ET_3D_temperature_alloy0_125_0.2.vti",
-        power_w=125.0,
-        scan_speed_m_s=0.2,
-        beam_diameter_m=80.0e-6,
-        absorptivity=0.59,
-        thermal_conductivity_w_mk=23.75,
-        density_kg_m3=18038.9,
-        heat_capacity_j_kgk=251.6,
-        x_limits_um=(-160.0, 380.0),
-        y_limits_um=(0.0, 200.0),
-        z_limits_um=(-60.0, 0.0),
-        spatial_res_um=1.0,
+    args = parse_args()
+    outputs = export_eagar_tsai_vti_from_excel(
+        excel_path=args.excel,
+        row_index=args.row_index,
+        output_vti=args.output_vti,
+        output_png=args.output_png,
+        x_limits_um=tuple(args.x_limits_um),
+        y_limits_um=tuple(args.y_limits_um),
+        z_limits_um=tuple(args.z_limits_um),
+        spatial_res_um=args.spatial_res_um,
+        workers=args.workers,
+        chunk_size=args.chunk_size,
+        mirror_y=args.mirror_y,
+        auto_vti_limits=not args.no_auto_vti_limits,
+        vti_padding_um=args.vti_padding_um,
+        colorbar_gap=args.colorbar_gap,
+        trim_render_whitespace=not args.no_trim_render_whitespace,
+        render_padding_px=args.render_padding_px,
     )
-    print(f"Wrote {vti_path}")
+    if isinstance(outputs, tuple):
+        for output in outputs:
+            print(f"Wrote {output}")
+    else:
+        print(f"Wrote {outputs}")
