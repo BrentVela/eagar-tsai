@@ -95,7 +95,7 @@ DEFAULT_CALC_ROOT = "beamer-template/figures"
     show_cet_lines = False
 
     if include_overlay:
-        overlay_csv = [REPO_ROOT / "beamer-template/figures/data/TCAM_GR_alloy0_250_0.csv"]
+        overlay_csv = [REPO_ROOT / "beamer-template/figures/data/TCAM_GR_alloy0_250_0.5.csv"]
         overlay_label = ["TCAM liquidus boundary"]
         overlay_kwargs = [
             {"c": "lime", "s": 3, "alpha": 0.1},
@@ -127,7 +127,7 @@ DEFAULT_CALC_ROOT = "beamer-template/figures"
 - Description: Thermo-Calc AM Module GUI view of the melt pool.
 - Manual step: Run `microstructure/PlotMicrostructure.py`, and ensure the following:<br/>
     ```
-    LIQUIDUS_CSV = ("beamer-template/figures/data/TCAM_GR_alloy0_250_0.csv")
+    LIQUIDUS_CSV = ("beamer-template/figures/data/TCAM_GR_alloy0_250_0.5.csv")
     OUTPUT_PATH = ("beamer-template/figures/TCAM/TCAM_projected_microstructure_alloy0_250_0.5.png")
     INTERPOLATE_PARAVIEW = False
     INTERPOLATION_Y_POINTS = 75
@@ -142,7 +142,7 @@ DEFAULT_CALC_ROOT = "beamer-template/figures"
 - Description: TCAM-derived G and R along the liquidus, projected onto a yz slice of the melt pool. Only points with positive R are valid, so the projection is the back of the melt pool, the solidification front.
 - Manual step: Run `microstructure/PlotGR.py`, and ensure the following:<br/>
     ```
-    LIQUIDUS_CSV = ("beamer-template/figures/data/TCAM_GR_alloy0_250_0.csv")
+    LIQUIDUS_CSV = ("beamer-template/figures/data/TCAM_GR_alloy0_250_0.5.csv")
     OUTPUT_PATH = ("beamer-template/figures/TCAM/TCAM_projected_GR_alloy0_250_0.5.png")
     INTERPOLATE_PARAVIEW = False
     INTERPOLATION_Y_POINTS = 75

@@ -34,7 +34,7 @@ overlay_label = None
 overlay_kwargs = None
 
 if include_overlay:
-    overlay_csv = [REPO_ROOT / "beamer-template/figures/data/TCAM_GR_alloy0_250_0.csv"]
+    overlay_csv = [REPO_ROOT / "beamer-template/figures/data/TCAM_GR_alloy0_250_0.5.csv"]
     overlay_label = ["TCAM liquidus boundary"]
     overlay_kwargs = [
         {"c": "lime", "s": 3, "alpha": 0.1},

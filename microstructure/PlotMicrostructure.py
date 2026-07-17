@@ -18,7 +18,7 @@ except ImportError:
     from GR_Map import _load_alloy_from_excel, _tc_python_cache_dir, get_CET_grid
 
 
-LIQUIDUS_CSV = ("beamer-template/figures/data/TCAM_GR_alloy0_250_0.csv")
+LIQUIDUS_CSV = ("beamer-template/figures/data/TCAM_GR_alloy0_250_0.5.csv")
 OUTPUT_PATH = ("beamer-template/figures/TCAM/TCAM_projected_microstructure_alloy0_250_0.5.png")
 INTERPOLATE_PARAVIEW = False
 INTERPOLATION_Y_POINTS = 75

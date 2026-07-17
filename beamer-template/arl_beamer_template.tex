@@ -377,33 +377,31 @@
       {\fontsize{14}{17}\selectfont Steady-state TCAM simulation for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
     \end{column}
     \begin{column}{0.40\textwidth}
+      \begin{minipage}[t]{0.94\linewidth}
       \begin{block}{Higher-Fidelity Thermal Reference}
+        \vspace{0.3em}
         \begin{itemize}
-          \item Composition-specific, temperature-dependent properties from TCHEA8 and Scheil calculations.
-          \item Provides Marangoni-flow and keyholing modes, with evaporation, radiation, and convection.
-          \item Matched composition, power, velocity, and beam dimensions enable direct comparison with Eagar--Tsai.
+          \setlength{\itemsep}{0.35em}
+          \item Integrates FEM for thermal conduction with CFD for melt-pool fluid flow.
+          \item Composition-specific, temperature-dependent thermophysical properties.
+          \item Captures Marangoni flow, keyholing, evaporation, radiation, and convection.
         \end{itemize}
+        \vspace{0.3em}
       \end{block}
 
       \vspace{-0.25em}
       \begin{block}{Outputs Used in This Work}
+        \vspace{0.3em}
         \begin{itemize}
-          \item 3D temperature field and melt-pool geometry
-          \item $G$ and $R$ from downstream post-processing
+          \setlength{\itemsep}{0.35em}
+          \item 3D temperature field
+          \item Melt-pool geometry
+          \item Thermal gradient ($G$) and solidification rate ($R$) from ParaView post-processing
         \end{itemize}
+        \vspace{0.3em}
       \end{block}
 
-      \vspace{-0.25em}
-      \begin{alertblock}{Role in Bayesian Updating}
-        \centering
-        $\displaystyle
-        T_{\mathrm{corrected}}
-        = T_{\mathrm{ET}}
-        + \widehat{\left(T_{\mathrm{TCAM}}-T_{\mathrm{ET}}\right)}$
-
-        \vspace{0.35em}
-        {\raggedright\fontsize{13.5}{16}\selectfont TCAM supplies sparse reference data used to learn and correct the ET discrepancy.\par}
-      \end{alertblock}
+      \end{minipage}
     \end{column}
   \end{columns}
 \end{frame}
@@ -474,6 +472,16 @@
       {\fontsize{15}{18}\selectfont TCAM-derived microstructure classification projected along the solidification front onto a $yz$ slice for the same alloy and process condition.}
     \end{column}
   \end{columns}
+\end{frame}
+
+\begin{frame}{ET vs.\ TCAM -- Melt Pool Comparison}
+  \centering
+  \vspace{-1.0em}
+  \includegraphics[
+    width=0.96\linewidth,
+    height=0.84\textheight,
+    keepaspectratio
+  ]{../beamer-template/figures/TCAM/ET_TC_temp_yz_0_80_160um.png}
 \end{frame}
 
 \begin{frame}{Closing}
