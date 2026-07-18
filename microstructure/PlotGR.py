@@ -12,13 +12,13 @@ from scipy.ndimage import gaussian_filter
 from scipy.interpolate import griddata
 
 
-LIQUIDUS_CSV = ("beamer-template/figures/data/TCAM_GR_alloy0_250_0.5.csv")
-OUTPUT_PATH = ("beamer-template/figures/TCAM/TCAM_projected_GR_alloy0_250_0.5.png")
+LIQUIDUS_CSV = ("beamer-template/figures2/250_0.5/liquidus_GR_alloy0_250_0.5.csv")
+OUTPUT_PATH = ("beamer-template/figures2/250_0.5/projected_GR_alloy0_250_0.5.png")
 INTERPOLATE_PARAVIEW = False
 INTERPOLATION_Y_POINTS = 75
 INTERPOLATION_Z_POINTS = 115
 SMOOTHING_SIGMA = 0.0
-POINT_SIZE = 7
+POINT_SIZE = 10
 MICRON_SCALE_THRESHOLD = 1.0e-2
 
 ET_COLUMNS = {"x", "y", "z", "G", "R"}

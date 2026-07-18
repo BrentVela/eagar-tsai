@@ -4,6 +4,7 @@ from pathlib import Path
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -25,7 +26,7 @@ from tc_python import CompositionUnit
 DEFAULT_EXCEL = "effective_cp_data.xlsx"
 DEFAULT_ROW_INDEX = 2 # EXCEL ROW - 2
 DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V"]
-DEFAULT_CALC_ROOT = "beamer-template/figures2"
+DEFAULT_CALC_ROOT = "beamer-template/figures"
 
 DEFAULT_THERMO_DB = "TCHEA8"
 DEFAULT_KINETIC_DB = "MOBHEA3"
@@ -164,6 +165,26 @@ def _compute_temperature_volume(process_df, domain, workers, chunk_size):
     )
 
 
+def _plot_et_temperature_field(temperature_field, output_path):
+    """Render the library temperature panels with workflow-specific styling."""
+    figure = temperature_field.plot(output=None)
+    for axis in figure.axes:
+        # The two temperature panels contain AxesImage objects. Colorbar axes
+        # do not, so this leaves their internal artists alone while their
+        # linked mappables update automatically.
+        if not axis.images:
+            continue
+        for image in axis.images:
+            image.set_cmap("inferno")
+        for contour in axis.collections:
+            contour.set_facecolor("none")
+            contour.set_edgecolor("cyan")
+            contour.set_linewidth(1.25)
+
+    figure.savefig(output_path, bbox_inches="tight")
+    plt.close(figure)
+
+
 def _warn_if_liquidus_touches_vti_boundary(liquidus_df, vti_limits_um):
     boundary_checks = {
         "x_min": ("x", vti_limits_um["x"][0], liquidus_df["x"].min()),
@@ -213,7 +234,7 @@ def run_workflow(args):
 
     temperature_field = result.loc[0, "temperature_field"]
     if temperature_field is not None:
-        temperature_field.plot(output=temperature_png)
+        _plot_et_temperature_field(temperature_field, temperature_png)
         print(f"Wrote {temperature_png}")
 
     print("Writing matched ET-prior-style 3D temperature CSV...")

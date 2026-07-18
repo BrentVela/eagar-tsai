@@ -45,7 +45,7 @@
     \begin{column}{0.32\textwidth}
       \begin{block}{Composition}
         \centering
-        \includegraphics[width=\linewidth,height=0.28\textheight,keepaspectratio]{affine_projection_nimplex_nb_cr_v_w_zr_20pct_pentagon_clean.png}
+        \includegraphics[width=\linewidth,height=0.28\textheight,keepaspectratio]{figures/affine_projection_nimplex_nb_cr_v_w_zr_20pct_pentagon_clean.png}
 
         \vspace{0.25em}
         \begin{itemize}
@@ -58,7 +58,7 @@
     \begin{column}{0.32\textwidth}
       \begin{block}{Solidification Condition}
         \centering
-        \includegraphics[width=\linewidth,height=0.27\textheight,keepaspectratio]{et_library_solidification_condition.png}
+        \includegraphics[width=\linewidth,height=0.27\textheight,keepaspectratio]{figures/et_solidification_condition.png}
 
         \vspace{0.2em}
         \begin{itemize}
@@ -475,13 +475,38 @@
 \end{frame}
 
 \begin{frame}{ET vs.\ TCAM -- Melt Pool Comparison}
-  \centering
   \vspace{-1.0em}
-  \includegraphics[
-    width=0.96\linewidth,
-    height=0.84\textheight,
-    keepaspectratio
-  ]{../beamer-template/figures/TCAM/ET_TC_temp_yz_0_80_160um.png}
+  \hspace*{0.25cm}%
+  \begin{minipage}{\textwidth}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.28\textwidth}
+      \raggedleft
+      \raisebox{0.70cm}{%
+        \hspace*{1.0cm}%
+        \includegraphics[
+          height=0.715\textheight
+        ]{../beamer-template/figures/et_melt_pool_vertical.png}%
+      }
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \centering
+      \includegraphics[
+        width=\linewidth,
+        height=0.82\textheight,
+        keepaspectratio
+      ]{../beamer-template/figures/TCAM/ET_TC_temp_yz_0_80_160um_inferno.png}
+    \end{column}
+    \begin{column}{0.23\textwidth}
+      \raggedright
+      \raisebox{0.70cm}{%
+        \hspace*{-1.3cm}%
+        \includegraphics[
+          height=0.715\textheight
+        ]{../beamer-template/figures/tc_melt_pool_vertical.png}%
+      }
+    \end{column}
+  \end{columns}
+  \end{minipage}
 \end{frame}
 
 \begin{frame}{Closing}

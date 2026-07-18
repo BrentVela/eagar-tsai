@@ -22,12 +22,12 @@ METADATA_CSV = Path(
 )
 OUTPUT_DIR = Path("beamer-template/figures/TCAM")
 
-SLICE_X_UM = (0.0, 40.0, 80.0, 120.0, 160.0)
+SLICE_X_UM = (0.0, 80.0, 160.0)
 PLOT_Y_LIMIT_UM = 100.0
 PLOT_Z_MIN_UM = -115.0
-INTERPOLATION_NY = 241
-INTERPOLATION_NZ = 231
-KEYHOLE_COLOR = "#202020"
+SAMPLE_GRID_NY = 241
+SAMPLE_GRID_NZ = 231
+KEYHOLE_COLOR = "#555555"
 MIN_KEYHOLE_WIDTH_CELLS = 3
 MIN_TCAM_CONTOUR_LENGTH_UM = 5.0
 
@@ -135,8 +135,8 @@ def mask_keyhole(temperature, invalid):
 
 def probe_tcam_slices(source):
     """Probe each requested YZ plane using the original volume-cell topology."""
-    y = np.linspace(0.0, PLOT_Y_LIMIT_UM, INTERPOLATION_NY)
-    z = np.linspace(PLOT_Z_MIN_UM, 0.0, INTERPOLATION_NZ)
+    y = np.linspace(0.0, PLOT_Y_LIMIT_UM, SAMPLE_GRID_NY)
+    z = np.linspace(PLOT_Z_MIN_UM, 0.0, SAMPLE_GRID_NZ)
     yy, zz = np.meshgrid(y, z)
     slices = {}
     for x in SLICE_X_UM:
@@ -180,7 +180,7 @@ def draw_liquidus(axis, y, z, temperature, liquidus, filter_segments=False):
             z,
             temperature,
             levels=[liquidus],
-            colors="white",
+            colors="cyan",
             linewidths=1.1,
         )
         return
@@ -205,7 +205,7 @@ def draw_liquidus(axis, y, z, temperature, liquidus, filter_segments=False):
         axis.plot(
             segment[:, 0],
             segment[:, 1],
-            color="white",
+            color="cyan",
             linewidth=1.1,
             solid_capstyle="round",
             solid_joinstyle="round",
@@ -214,7 +214,7 @@ def draw_liquidus(axis, y, z, temperature, liquidus, filter_segments=False):
 
 def output_path_for_slices(slice_x_um):
     distances = "_".join(f"{x:g}" for x in slice_x_um)
-    return OUTPUT_DIR / f"ET_TC_temp_yz_{distances}um.png"
+    return OUTPUT_DIR / f"ET_TC_temp_yz_{distances}um_inferno.png"
 
 
 def parse_args():
@@ -268,7 +268,7 @@ def main(slice_x_um=SLICE_X_UM, output_png=None):
         sharey=True,
     )
     axes = np.atleast_1d(axes)
-    cmap = plt.get_cmap("cividis").copy()
+    cmap = plt.get_cmap("inferno").copy()
     cmap.set_bad(KEYHOLE_COLOR)
     any_keyhole = False
     mappable = None
@@ -318,9 +318,9 @@ def main(slice_x_um=SLICE_X_UM, output_png=None):
         axis.text(
             0.015,
             0.08,
-            rf"$x={x:g}\,\mu$m",
+            rf"$x = {x:g}\,\mu\mathrm{{m}}$",
             transform=axis.transAxes,
-            fontsize=9,
+            fontsize=14,
             color="white",
             bbox={
                 "facecolor": "black",
@@ -347,8 +347,9 @@ def main(slice_x_um=SLICE_X_UM, output_png=None):
         bottom=plot_bottom,
         hspace=0.08,
     )
+    panel_right = max(axis.get_position().x1 for axis in axes)
     colorbar_axis = figure.add_axes(
-        [0.84, plot_bottom, 0.05, plot_top - plot_bottom]
+        [panel_right + 0.018, plot_bottom, 0.05, plot_top - plot_bottom]
     )
     colorbar = figure.colorbar(mappable, cax=colorbar_axis)
     colorbar.set_label("Temperature (K)", fontsize=13, labelpad=12)

@@ -39,7 +39,9 @@ def main() -> None:
 
     fig.patch.set_facecolor("white")
     fig.subplots_adjust(left=0.015, right=0.995, bottom=0.04, top=0.99, wspace=0.08)
-    out_path = os.path.join(os.path.dirname(__file__), "kgt_tip_radii.png")
+    out_dir = os.path.join(os.path.dirname(__file__), "figures")
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, "kgt_tip_radii.png")
     fig.savefig(out_path, dpi=220, bbox_inches="tight", facecolor="white")
     plt.close(fig)
 

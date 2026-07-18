@@ -25,9 +25,9 @@ OUTPUT_PNG = Path(
 USE_TCAM_SLICE_MAX = False
 PLOT_Y_LIMIT_UM = 100.0
 PLOT_Z_MIN_UM = -115.0
-INTERPOLATION_NY = 241
-INTERPOLATION_NZ = 201
-KEYHOLE_COLOR = "#202020"
+SAMPLE_GRID_NY = 241
+SAMPLE_GRID_NZ = 201
+KEYHOLE_COLOR = "#555555"
 MIN_KEYHOLE_WIDTH_CELLS = 3
 MIN_TCAM_CONTOUR_LENGTH_UM = 5.0
 #TEMPERATURE_VMAX_K = 6000 #Custom max temperature
@@ -125,8 +125,8 @@ def load_tcam_mesh_slice():
                 f"Available arrays: {available}"
             )
 
-    y = np.linspace(0.0, PLOT_Y_LIMIT_UM, INTERPOLATION_NY)
-    z = np.linspace(PLOT_Z_MIN_UM, 0.0, INTERPOLATION_NZ)
+    y = np.linspace(0.0, PLOT_Y_LIMIT_UM, SAMPLE_GRID_NY)
+    z = np.linspace(PLOT_Z_MIN_UM, 0.0, SAMPLE_GRID_NZ)
     yy, zz = np.meshgrid(y, z)
     query_points = np.column_stack(
         (
@@ -201,8 +201,8 @@ def interpolate_paraview_slice(points):
 
     # Interpolate only over the displayed melt-pool neighborhood when the
     # input is an irregular slice or an unsliced volume export.
-    y = np.linspace(0.0, PLOT_Y_LIMIT_UM, INTERPOLATION_NY)
-    z = np.linspace(PLOT_Z_MIN_UM, 0.0, INTERPOLATION_NZ)
+    y = np.linspace(0.0, PLOT_Y_LIMIT_UM, SAMPLE_GRID_NY)
+    z = np.linspace(PLOT_Z_MIN_UM, 0.0, SAMPLE_GRID_NZ)
     yy, zz = np.meshgrid(y, z)
 
     if planar:
@@ -273,7 +273,7 @@ def draw_tcam_liquidus(axis, y, z, temperature, liquidus):
         axis.plot(
             segment[:, 0],
             segment[:, 1],
-            color="white",
+            color="cyan",
             linewidth=1.5,
             solid_capstyle="round",
             solid_joinstyle="round",
@@ -306,7 +306,7 @@ def main():
     vmin = min(np.nanmin(temperature), float(np.ma.min(paraview_temperature)))
 
     figure, axis = plt.subplots(figsize=(8.4, 4.8))
-    cmap = plt.get_cmap("cividis").copy()
+    cmap = plt.get_cmap("inferno").copy()
     cmap.set_bad(KEYHOLE_COLOR)
     paraview_image = axis.pcolormesh(
         paraview_y,
@@ -349,7 +349,7 @@ def main():
         zz,
         temperature,
         levels=[liquidus],
-        colors="white",
+        colors="cyan",
         linewidths=1.5,
     )
     draw_tcam_liquidus(
