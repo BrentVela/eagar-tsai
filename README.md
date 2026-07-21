@@ -21,7 +21,7 @@ Some tools are not installed through `requirements.txt`:
 
 Note: many of these files require you to hardcode the input and output file paths. Additionally, most ET functionality has been updated to use the [eagar-tsai Python library](https://arroyavelab.github.io/eagar-tsai).
 
-- `workflow.py` Streamlines the ET outputs into one file. Outputs a temperature heatmap, metadata file, 3D temperature distribution (.csv and .vti), GR and liquidus data, GR projection, GR map overlay, and microstructure projection. 
+- `workflow_ET.py` runs the complete ET figure pipeline or selected steps. It outputs a temperature heatmap, metadata file, 3D temperature distribution (`.csv` and `.vti`), GR and liquidus data, GR projection, GR map overlay, and microstructure projection.
 
 microstructure/:
 - `GR_Map_test.py` Run this file to calculate GR maps with GR_Map.py. This file requires alloy data as input and can overlay liquidus GR points onto the GR map if provided in a csv.

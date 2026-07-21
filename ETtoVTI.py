@@ -20,8 +20,8 @@ from eagar_tsai import (
 
 DEFAULT_EXCEL = "effective_cp_data.xlsx"
 DEFAULT_ROW_INDEX = 2 # EXCEL ROW - 2
-DEFAULT_OUTPUT_VTI = "beamer-template/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.vti"
-DEFAULT_OUTPUT_PNG = "beamer-template/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.png"
+DEFAULT_OUTPUT_VTI = "beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.vti"
+DEFAULT_OUTPUT_PNG = "beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.png"
 DEFAULT_LIMITS_UM = {
     "x": (-160.0, 380.0),
     "y": (0.0, 200.0),
@@ -107,7 +107,7 @@ def _inputs_to_melt_pool_dataframe(inputs):
 
 
 def _expanded_vti_limits(result, padding_um):
-    """Match workflow.py's melt-pool-based VTI domain expansion."""
+    """Match workflow_ET.py's melt-pool-based VTI domain expansion."""
     row = result.iloc[0]
     melt_length_um = float(row["melt_length_um"])
     melt_width_um = float(row["melt_width_um"])

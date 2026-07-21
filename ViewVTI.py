@@ -2,7 +2,7 @@ import pyvista as pv
 
 T_L = 3454.846466711204
 
-grid = pv.read("beamer-template/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5_depth200um.vti")
+grid = pv.read("beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5_depth200um.vti")
 
 surface = grid.extract_surface(algorithm="dataset_surface")
 #liquidus_line = surface.contour([T_L], scalars="Temperature_K").tube(radius=1.0)

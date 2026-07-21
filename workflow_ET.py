@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+"""Regenerate ET data products and presentation figures for one alloy row.
+
+Run without ``--steps`` for the full ET-to-microstructure pipeline, or select
+individual steps to reuse intermediate files already present in the output
+directory.
+"""
+
 import argparse
 import os
 from pathlib import Path
@@ -16,22 +24,25 @@ from eagar_tsai import (
     compute_temperature_volume,
 )
 from ETtoVTI import export_eagar_tsai_vti
-from microstructure.GRFrom3D import compute_gr_from_vti
-from microstructure.GR_Map import request_GR_Grid_from_excel
-from microstructure.PlotGR import plot_gr_projection
-from microstructure.PlotMicrostructure import plot_projected_liquidus
-from tc_python import CompositionUnit
-
-
 DEFAULT_EXCEL = "effective_cp_data.xlsx"
 DEFAULT_ROW_INDEX = 2 # EXCEL ROW - 2
 DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V"]
-DEFAULT_CALC_ROOT = "beamer-template/figures"
+DEFAULT_CALC_ROOT = "beamer/figures"
 
 DEFAULT_THERMO_DB = "TCHEA8"
 DEFAULT_KINETIC_DB = "MOBHEA3"
 DEFAULT_PRIMARY_PHASE = "BCC_B2"
 DEFAULT_INTERFACIAL_ENERGY = 0.5
+
+ALL_STEPS = (
+    "temperature-field",
+    "temperature-volume",
+    "temperature-3d",
+    "liquidus",
+    "gr-map",
+    "gr-projection",
+    "microstructure",
+)
 
 DEFAULT_DOMAIN = SimulationDomain(
     x_length_um=600.0,
@@ -46,26 +57,14 @@ DEFAULT_VTI_LIMITS_UM = {
 }
 
 INPUT_COLUMNS = {
-    "velocity_m_s": ["velocity_m_s", "Velocity_m/s", "Velocity (m/s)", "v"],
-    "power_w": ["power_w", "Power", "Power (W)", "P"],
-    "beam_diameter_m": ["beam_diameter_m", "Beam_diameter_m", "Beam Diam (m)"],
-    "absorptivity": ["absorptivity", "Absorptivity"],
-    "liquidus_temperature_k": ["liquidus_temperature_k", "Liquidus (K)", "TL", "PROP LT (K)"],
-    "thermal_conductivity_w_mk": [
-        "thermal_conductivity_w_mk",
-        "THCD LT (W/mK)",
-        "K_LT",
-        "PROP LT THCD (W/(mK))",
-        "EQ LT THCD (W/mK)",
-    ],
-    "density_kg_m3": ["density_kg_m3", "RT Density (kg/m3)", "PROP RT Density (kg/m3)"],
-    "specific_heat_j_kgk": [
-        "specific_heat_j_kgk",
-        "Cp, Sheikh (J/kgK)",
-        "Cp, LT (J/kgK)",
-        "Cp_LT",
-        "PROP LT C (J/(kg K))",
-    ],
+    "velocity_m_s": "Velocity (m/s)",
+    "power_w": "Power (W)",
+    "beam_diameter_m": "Beam Diam (m)",
+    "absorptivity": "Absorptivity",
+    "liquidus_temperature_k": "Liquidus (K)",
+    "thermal_conductivity_w_mk": "THCD LT (W/mK)",
+    "density_kg_m3": "RT Density (kg/m3)",
+    "specific_heat_j_kgk": "Cp, Sheikh (J/kgK)",
 }
 
 
@@ -73,19 +72,24 @@ def _format_number(value):
     return f"{float(value):g}"
 
 
-def _first_existing(row, candidates, output_name):
-    for col in candidates:
-        if col in row.index and not pd.isna(row[col]):
-            return float(row[col])
-    raise ValueError(f"Excel row is missing a value for {output_name}. Tried: {candidates}")
-
-
 def _load_process_inputs(excel_path, row_index):
     df = pd.read_excel(excel_path)
+    missing_columns = [column for column in INPUT_COLUMNS.values() if column not in df.columns]
+    if missing_columns:
+        raise ValueError(
+            f"{excel_path} is missing required column(s): {', '.join(missing_columns)}"
+        )
+
     row = df.iloc[row_index]
+    missing_values = [column for column in INPUT_COLUMNS.values() if pd.isna(row[column])]
+    if missing_values:
+        raise ValueError(
+            f"Excel row {row_index} is missing value(s) for: {', '.join(missing_values)}"
+        )
+
     values = {
-        output_name: _first_existing(row, candidates, output_name)
-        for output_name, candidates in INPUT_COLUMNS.items()
+        output_name: float(row[column])
+        for output_name, column in INPUT_COLUMNS.items()
     }
     return pd.DataFrame([values]), row
 
@@ -202,24 +206,32 @@ def _warn_if_liquidus_touches_vti_boundary(liquidus_df, vti_limits_um):
             )
 
 
-def run_workflow(args):
-    process_df, source_row = _load_process_inputs(args.excel_path, args.row_index)
-    output_dir, stem = _default_output_dir(args.calc_root, source_row, args.row_index, process_df)
-    if args.output_dir:
-        output_dir = Path(args.output_dir)
+def _require_files(paths, step, prerequisite_steps):
+    missing = [str(path) for path in paths if not Path(path).is_file()]
+    if missing:
+        prerequisites = " ".join(prerequisite_steps)
+        raise FileNotFoundError(
+            f"Step '{step}' is missing input(s): {', '.join(missing)}. "
+            f"Generate them first with --steps {prerequisites}, or include "
+            "those prerequisite steps in the same run."
+        )
 
-    output_dir.mkdir(parents=True, exist_ok=True)
 
-    et_csv = output_dir / f"ET_{stem}.csv"
-    vti_path = output_dir / f"ET_3D_temperature_{stem}.vti"
-    meta_path = output_dir / f"ET_meta_{stem}.csv"
-    liquidus_csv = output_dir / f"liquidus_GR_{stem}.csv"
-    gr_map_png = output_dir / f"GR_map_overlayET_{stem}.png"
-    projected_png = output_dir / f"projected_microstructure_{stem}.png"
-    gr_projected_png = output_dir / f"projected_GR_{stem}.png"
-    temperature_png = output_dir / f"temperature_field_{stem}.png"
-    temperature_3d_png = output_dir / f"ET_3D_temperature_{stem}.png"
+def _workflow_paths(output_dir, stem):
+    return {
+        "et_csv": output_dir / f"ET_{stem}.csv",
+        "vti": output_dir / f"ET_3D_temperature_{stem}.vti",
+        "meta_csv": output_dir / f"ET_meta_{stem}.csv",
+        "liquidus_csv": output_dir / f"liquidus_GR_{stem}.csv",
+        "gr_map_png": output_dir / f"GR_map_overlayET_{stem}.png",
+        "microstructure_png": output_dir / f"projected_microstructure_{stem}.png",
+        "gr_projection_png": output_dir / f"projected_GR_{stem}.png",
+        "temperature_png": output_dir / f"temperature_field_{stem}.png",
+        "temperature_3d_png": output_dir / f"ET_3D_temperature_{stem}.png",
+    }
 
+
+def _generate_temperature_field(args, process_df, paths):
     print("Running Eagar-Tsai melt pool calculation...")
     result = compute_melt_pool(
         process_df,
@@ -229,14 +241,18 @@ def run_workflow(args):
         output_dir=None,
         return_field=True,
     )
-    result.to_csv(meta_path, index=False)
-    print(f"Wrote {meta_path}")
+    result.to_csv(paths["meta_csv"], index=False)
+    print(f"Wrote {paths['meta_csv']}")
 
     temperature_field = result.loc[0, "temperature_field"]
-    if temperature_field is not None:
-        _plot_et_temperature_field(temperature_field, temperature_png)
-        print(f"Wrote {temperature_png}")
+    if temperature_field is None:
+        raise ValueError("The Eagar-Tsai calculation did not return a temperature field.")
+    _plot_et_temperature_field(temperature_field, paths["temperature_png"])
+    print(f"Wrote {paths['temperature_png']}")
+    return result
 
+
+def _generate_temperature_volume(args, process_df, paths):
     print("Writing matched ET-prior-style 3D temperature CSV...")
     volume = _compute_temperature_volume(
         process_df=process_df,
@@ -244,27 +260,38 @@ def run_workflow(args):
         workers=args.workers,
         chunk_size=args.chunk_size,
     )
-    _temperature_volume_to_dataframe(volume).to_csv(et_csv, index=False)
-    print(f"Wrote {et_csv}")
+    _temperature_volume_to_dataframe(volume).to_csv(paths["et_csv"], index=False)
+    print(f"Wrote {paths['et_csv']}")
 
-    vti_limits_um = _expanded_vti_limits(result, args.vti_padding_um)
+
+def _load_metadata(paths, step, prerequisite_steps):
+    _require_files([paths["meta_csv"]], step, prerequisite_steps)
+    return pd.read_csv(paths["meta_csv"])
+
+
+def _generate_temperature_3d(args, process_df, paths, metadata=None):
+    if metadata is None:
+        metadata = _load_metadata(paths, "temperature-3d", ["temperature-field"])
+    vti_limits_um = _expanded_vti_limits(metadata, args.vti_padding_um)
     print(
         "Using VTI limits: "
-        f"x={vti_limits_um['x']} um, y={vti_limits_um['y']} um, z={vti_limits_um['z']} um"
+        f"x={vti_limits_um['x']} um, y={vti_limits_um['y']} um, "
+        f"z={vti_limits_um['z']} um"
     )
 
-    print("Exporting 3D temperature VTI...")
+    row = process_df.iloc[0]
+    print("Exporting 3D temperature VTI and PNG...")
     export_eagar_tsai_vti(
-        output_vti=vti_path,
-        output_png=temperature_3d_png,
-        power_w=float(process_df.loc[0, "power_w"]),
-        scan_speed_m_s=float(process_df.loc[0, "velocity_m_s"]),
-        beam_diameter_m=float(process_df.loc[0, "beam_diameter_m"]),
-        absorptivity=float(process_df.loc[0, "absorptivity"]),
-        liquidus_temperature_k=float(process_df.loc[0, "liquidus_temperature_k"]),
-        thermal_conductivity_w_mk=float(process_df.loc[0, "thermal_conductivity_w_mk"]),
-        density_kg_m3=float(process_df.loc[0, "density_kg_m3"]),
-        heat_capacity_j_kgk=float(process_df.loc[0, "specific_heat_j_kgk"]),
+        output_vti=paths["vti"],
+        output_png=paths["temperature_3d_png"],
+        power_w=float(row["power_w"]),
+        scan_speed_m_s=float(row["velocity_m_s"]),
+        beam_diameter_m=float(row["beam_diameter_m"]),
+        absorptivity=float(row["absorptivity"]),
+        liquidus_temperature_k=float(row["liquidus_temperature_k"]),
+        thermal_conductivity_w_mk=float(row["thermal_conductivity_w_mk"]),
+        density_kg_m3=float(row["density_kg_m3"]),
+        heat_capacity_j_kgk=float(row["specific_heat_j_kgk"]),
         x_limits_um=vti_limits_um["x"],
         y_limits_um=vti_limits_um["y"],
         z_limits_um=vti_limits_um["z"],
@@ -273,17 +300,36 @@ def run_workflow(args):
         chunk_size=args.chunk_size,
         mirror_y=False,
     )
-    print(f"Wrote {vti_path}")
-    print(f"Wrote {temperature_3d_png}")
+    print(f"Wrote {paths['vti']}")
+    print(f"Wrote {paths['temperature_3d_png']}")
+
+
+def _generate_liquidus(args, paths, metadata=None):
+    from microstructure.GRFrom3D import compute_gr_from_vti
+
+    _require_files(
+        [paths["vti"], paths["meta_csv"]],
+        "liquidus",
+        ["temperature-field", "temperature-3d"],
+    )
+    if metadata is None:
+        metadata = pd.read_csv(paths["meta_csv"])
+    vti_limits_um = _expanded_vti_limits(metadata, args.vti_padding_um)
 
     print("Extracting liquidus G/R from VTI...")
     _, _, _, liquidus_df = compute_gr_from_vti(
-        vti_path=vti_path,
-        meta_path=meta_path,
-        output_path=liquidus_csv,
+        vti_path=paths["vti"],
+        meta_path=paths["meta_csv"],
+        output_path=paths["liquidus_csv"],
     )
     _warn_if_liquidus_touches_vti_boundary(liquidus_df, vti_limits_um)
+    print(f"Wrote {paths['liquidus_csv']}")
 
+
+def _generate_gr_map(args, paths):
+    from microstructure.GR_Map import request_GR_Grid_from_excel
+
+    _require_files([paths["liquidus_csv"]], "gr-map", ["liquidus"])
     print("Generating GR map overlay...")
     request_GR_Grid_from_excel(
         excel_path=args.excel_path,
@@ -296,12 +342,31 @@ def run_workflow(args):
         show_plot=False,
         disable_cache=args.disable_tc_cache,
         disable_output=True,
-        save_path=gr_map_png,
-        overlay_csv=liquidus_csv,
+        save_path=paths["gr_map_png"],
+        overlay_csv=paths["liquidus_csv"],
         overlay_label="3D liquidus boundary",
         legend_loc=args.gr_legend_loc,
     )
+    print(f"Wrote {paths['gr_map_png']}")
 
+
+def _generate_gr_projection(paths):
+    from microstructure.PlotGR import plot_gr_projection
+
+    _require_files([paths["liquidus_csv"]], "gr-projection", ["liquidus"])
+    print("Generating projected G/R heatmap cross-section...")
+    plot_gr_projection(
+        liquidus_csv=paths["liquidus_csv"],
+        output_path=paths["gr_projection_png"],
+    )
+    print(f"Wrote {paths['gr_projection_png']}")
+
+
+def _generate_microstructure(args, paths):
+    from microstructure.PlotMicrostructure import plot_projected_liquidus
+    from tc_python import CompositionUnit
+
+    _require_files([paths["liquidus_csv"]], "microstructure", ["liquidus"])
     print("Generating projected weld cross-section...")
     projection_map_configs = {
         "excel_alloy": {
@@ -313,36 +378,69 @@ def run_workflow(args):
         }
     }
     plot_projected_liquidus(
-        liquidus_csv=liquidus_csv,
-        output_path=projected_png,
+        liquidus_csv=paths["liquidus_csv"],
+        output_path=paths["microstructure_png"],
         excel_path=args.excel_path,
         row_index=args.row_index,
         element_cols=args.element_cols,
         map_configs=projection_map_configs,
     )
+    print(f"Wrote {paths['microstructure_png']}")
 
-    print("Generating projected G/R heatmap cross-section...")
-    plot_gr_projection(
-        liquidus_csv=liquidus_csv,
-        output_path=gr_projected_png,
-    )
 
-    return {
-        "output_dir": output_dir,
-        "et_csv": et_csv,
-        "meta_csv": meta_path,
-        "vti": vti_path,
-        "temperature_3d_png": temperature_3d_png,
-        "liquidus_csv": liquidus_csv,
-        "gr_map_png": gr_map_png,
-        "projected_png": projected_png,
-        "gr_projected_png": gr_projected_png,
-        "temperature_png": temperature_png,
-    }
+def run_workflow(args):
+    process_df, source_row = _load_process_inputs(args.excel_path, args.row_index)
+    output_dir, stem = _default_output_dir(args.calc_root, source_row, args.row_index, process_df)
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    paths = _workflow_paths(output_dir, stem)
+    selected = set(args.steps or ALL_STEPS)
+    generated = {"output_dir": output_dir}
+    metadata = None
+
+    for step in ALL_STEPS:
+        if step not in selected:
+            continue
+        print(f"Running ET workflow step: {step}")
+        if step == "temperature-field":
+            metadata = _generate_temperature_field(args, process_df, paths)
+            generated["meta_csv"] = paths["meta_csv"]
+            generated["temperature_png"] = paths["temperature_png"]
+        elif step == "temperature-volume":
+            _generate_temperature_volume(args, process_df, paths)
+            generated["et_csv"] = paths["et_csv"]
+        elif step == "temperature-3d":
+            _generate_temperature_3d(args, process_df, paths, metadata)
+            generated["vti"] = paths["vti"]
+            generated["temperature_3d_png"] = paths["temperature_3d_png"]
+        elif step == "liquidus":
+            _generate_liquidus(args, paths, metadata)
+            generated["liquidus_csv"] = paths["liquidus_csv"]
+        elif step == "gr-map":
+            _generate_gr_map(args, paths)
+            generated["gr_map_png"] = paths["gr_map_png"]
+        elif step == "gr-projection":
+            _generate_gr_projection(paths)
+            generated["gr_projection_png"] = paths["gr_projection_png"]
+        elif step == "microstructure":
+            _generate_microstructure(args, paths)
+            generated["microstructure_png"] = paths["microstructure_png"]
+
+    return generated
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run the Eagar-Tsai to GR-map workflow for one Excel row.")
+    parser = argparse.ArgumentParser(
+        description="Regenerate ET data products and presentation figures for one Excel row."
+    )
+    parser.add_argument(
+        "--steps",
+        nargs="+",
+        choices=ALL_STEPS,
+        help="Run only the listed steps (default: all steps).",
+    )
     parser.add_argument("--excel", dest="excel_path", default=DEFAULT_EXCEL)
     parser.add_argument("--row-index", type=int, default=DEFAULT_ROW_INDEX, help="Zero-based pandas row index.")
     parser.add_argument("--element-cols", nargs="+", default=DEFAULT_ELEMENT_COLS)
@@ -363,6 +461,6 @@ def parse_args():
 
 if __name__ == "__main__":
     outputs = run_workflow(parse_args())
-    print("Workflow outputs:")
+    print("ET workflow outputs:")
     for name, path in outputs.items():
         print(f"  {name}: {path}")

@@ -10,10 +10,10 @@ from eagar_tsai import SimulationDomain, compute_melt_pool
 
 INPUT_XLSX = "effective_cp_data.xlsx"
 ROW_INDEX = 2
-OUTPUT_DIR = Path("beamer-template/figures/250_0.5_2")
+OUTPUT_DIR = Path("beamer/figures/250_0.5_2")
 OUTPUT_STEM = "alloy0_250_0.5"
 
-# Keep this aligned with workflow.py's DEFAULT_DOMAIN.
+# Keep this aligned with workflow_ET.py's DEFAULT_DOMAIN.
 DOMAIN = SimulationDomain(
     x_length_um=600.0,
     y_length_um=200.0,

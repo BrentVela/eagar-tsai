@@ -26,7 +26,7 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{pgfgantt}
-\usepackage{beamerthemeARLProposal}
+\usepackage{sff_theme}
 
 \title[Rapid Microstructure Prediction]{Rapid Microstructure Prediction in Laser Powder Bed Fusion\\ Using Bayesian Updating of Eagar--Tsai Model}
 \subtitle{}
@@ -98,7 +98,7 @@
     \end{column}
     \begin{column}{0.47\textwidth}
       \centering
-      \includegraphics[width=\linewidth,height=0.55\textheight,keepaspectratio]{../beamer-template/figures/phase_field_microstructure_proxy.png}
+      \includegraphics[width=\linewidth,height=0.55\textheight,keepaspectratio]{../beamer/figures/phase_field_microstructure_proxy.png}
 
       \vspace{0.2em}
       {\fontsize{14}{17}\selectfont Illustrative phase-field style proxy: the model must connect melt-pool thermal history to grain morphology and phase contrast.\par}
@@ -116,7 +116,7 @@
       \centering
       {\fontsize{18}{22}\selectfont\textcolor{sffblue}{\textbf{Dendritic}}\par}
       \vspace{0.2em}
-      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer-template/figures/ca_modes/ca_dendritic.png}
+      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer/figures/ca_modes/ca_dendritic.png}
 
       \vspace{0.2em}
       {\fontsize{13}{16}\selectfont Branching growth when interface perturbations are amplified by undercooling and solute rejection.\par}
@@ -125,7 +125,7 @@
       \centering
       {\fontsize{18}{22}\selectfont\textcolor{sffblue}{\textbf{Columnar}}\par}
       \vspace{0.2em}
-      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer-template/figures/ca_modes/ca_columnar_dendritic.png}
+      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer/figures/ca_modes/ca_columnar_dendritic.png}
 
       \vspace{0.2em}
       {\fontsize{13}{16}\selectfont Competing primary trunks aligned with heat flow select $\lambda_1$; sidebranching sets $\lambda_2$.\par}
@@ -134,7 +134,7 @@
       \centering
       {\fontsize{18}{22}\selectfont\textcolor{sffblue}{\textbf{Planar}}\par}
       \vspace{0.2em}
-      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer-template/figures/ca_modes/ca_planar.png}
+      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer/figures/ca_modes/ca_planar.png}
 
       \vspace{0.2em}
       {\fontsize{13}{16}\selectfont A stable solid--liquid front advances when the thermal gradient suppresses morphological instability.\par}
@@ -166,7 +166,7 @@
 
       \vspace{0.1em}
       \centering
-      \includegraphics[width=\linewidth,height=0.34\textheight,keepaspectratio]{../beamer-template/figures/kgt_tip_radii.png}
+      \includegraphics[width=\linewidth,height=0.34\textheight,keepaspectratio]{../beamer/figures/kgt_tip_radii.png}
     \end{column}
     \begin{column}{0.44\textwidth}
       {\fontsize{19}{23}\selectfont\textcolor{sffblue}{\textbf{Tip relations}}\par}
@@ -216,7 +216,7 @@
       \begin{minipage}[t][0.64\textheight][t]{\linewidth}
         \begin{tikzpicture}[x=\linewidth,y=1cm]
           \node[anchor=north east,inner sep=0pt] at (1.0,2.4) {
-            \includegraphics[width=0.50\linewidth]{../beamer-template/figures/eagar_tsai_og_figure.png}
+            \includegraphics[width=0.50\linewidth]{../beamer/figures/eagar_tsai_og_figure.png}
           };
           \node[anchor=west,inner sep=0pt,text width=0.98\linewidth] at (0.0,3.05) {
             {\fontsize{15}{18}\selectfont
@@ -235,6 +235,19 @@
             \Bigg]\,dt'
             \end{aligned}
             \)
+            }
+          };
+          \node[
+            overlay,
+            anchor=north west,
+            inner sep=0pt,
+            align=left,
+            text width=0.48\linewidth
+          ] at (0.01,-1.35) {
+            {\fontsize{18}{22}\selectfont
+            {\fontsize{22}{26}\selectfont\textcolor{sffblue}{\textbf{Inputs}}}\par
+            \textbf{Process:} $P$, $v$, $d_b$, $A$\par
+            \textbf{Material:} $T_L$, $k_L$, $\rho_0$, $C_p$
             }
           };
           \path (0,0) rectangle (1,4.25);
@@ -257,10 +270,10 @@
 
       \begin{tikzpicture}[x=\linewidth,y=1cm]
         \node[anchor=north,inner sep=0pt] at (0.37,-0.72) {
-          \includegraphics[width=0.66\linewidth]{../beamer-template/figures/dogu_figure_f.png}
+          \includegraphics[width=0.66\linewidth]{../beamer/figures/dogu_figure_f.png}
         };
         \node[anchor=center,inner sep=0pt] at (0.82,-3.50) {
-          \includegraphics[width=0.23\linewidth]{../beamer-template/figures/logo.png}
+          \includegraphics[width=0.23\linewidth]{../beamer/figures/logo.png}
         };
         \path (0,-4.45) rectangle (1,0);
       \end{tikzpicture}
@@ -281,7 +294,7 @@
       \centering
       \begin{minipage}[t][0.68\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/temperature_field_alloy0_250_0.5.png}
+        \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../beamer/figures/250_0.5/temperature_field_alloy0_250_0.5.png}
       \end{minipage}
 
       \vspace{0.25em}
@@ -291,7 +304,7 @@
       \centering
       \begin{minipage}[t][0.68\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.png}
+        \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.png}
       \end{minipage}
 
       \vspace{0.25em}
@@ -306,7 +319,7 @@
       \centering
       \begin{minipage}[t][0.58\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/projected_GR_alloy0_250_0.5.png}
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer/figures/250_0.5/projected_GR_alloy0_250_0.5.png}
       \end{minipage}
 
       \vspace{0.25em}
@@ -323,7 +336,7 @@
       \centering
       \begin{minipage}[t][0.58\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/GR_map_alloy0_250_0.5.png}
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer/figures/TCAM/GR_map_alloy0_250_0.5.png}
       \end{minipage}
 
       \vspace{0.25em}
@@ -338,7 +351,7 @@
       \centering
       \begin{minipage}[t][0.58\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/GR_map_overlayET_alloy0_250_0.5.png}
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer/figures/250_0.5/GR_map_overlayET_alloy0_250_0.5.png}
       \end{minipage}
 
       \vspace{0.25em}
@@ -355,7 +368,7 @@
       \centering
       \begin{minipage}[t][0.58\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/projected_microstructure_alloy0_250_0.5.png}
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer/figures/250_0.5/projected_microstructure_alloy0_250_0.5.png}
       \end{minipage}
 
       \vspace{0.25em}
@@ -370,7 +383,7 @@
       \centering
       \begin{minipage}[t][0.67\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.67\textheight,keepaspectratio]{../beamer-template/figures/TCAM/TCAM_alloy0_250_0.5.png}
+        \includegraphics[width=\linewidth,height=0.67\textheight,keepaspectratio]{../beamer/figures/TCAM_alloy0_250_0.5.png}
       \end{minipage}
 
       \vspace{0.2em}
@@ -413,7 +426,7 @@
       \vspace{-1.35em}
       \begin{minipage}[t][0.72\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{../beamer-template/figures/TCAM/TCAM_projected_GR_alloy0_250_0.5.png}
+        \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{../beamer/figures/TCAM/TCAM_projected_GR_alloy0_250_0.5.png}
       \end{minipage}
 
       \vspace{0.25em}
@@ -433,7 +446,7 @@
       \vspace{-1.35em}
       \begin{minipage}[t][0.72\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/250_0.5/GR_map_alloy0_250_0.5.png}
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer/figures/TCAM/GR_map_alloy0_250_0.5.png}
       \end{minipage}
 
       \vspace{0.25em}
@@ -448,7 +461,7 @@
       \centering
       \begin{minipage}[t][0.65\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer-template/figures/TCAM/GR_map_overlayET_TCAM_alloy0_250_0.png}
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer/figures/TCAM/GR_map_overlayET_TCAM_alloy0_250_0.png}
       \end{minipage}
 
       \vspace{0.25em}
@@ -465,7 +478,7 @@
       \centering
       \begin{minipage}[t][0.65\textheight][c]{\linewidth}
         \centering
-        \hspace*{-0.8em}\includegraphics[width=\linewidth,height=0.65\textheight,keepaspectratio]{../beamer-template/figures/TCAM/TCAM_projected_microstructure_alloy0_250_0.5.png}
+        \hspace*{-0.8em}\includegraphics[width=\linewidth,height=0.65\textheight,keepaspectratio]{../beamer/figures/TCAM/TCAM_projected_microstructure_alloy0_250_0.5.png}
       \end{minipage}
 
       \vspace{0.25em}
@@ -485,7 +498,7 @@
         \hspace*{1.0cm}%
         \includegraphics[
           height=0.715\textheight
-        ]{../beamer-template/figures/et_melt_pool_vertical.png}%
+        ]{../beamer/figures/et_melt_pool_vertical.png}%
       }
     \end{column}
     \begin{column}{0.46\textwidth}
@@ -494,7 +507,7 @@
         width=\linewidth,
         height=0.82\textheight,
         keepaspectratio
-      ]{../beamer-template/figures/TCAM/ET_TC_temp_yz_0_80_160um_inferno.png}
+      ]{../beamer/figures/TCAM/ET_TC_temp_yz_0_80_160um_inferno.png}
     \end{column}
     \begin{column}{0.23\textwidth}
       \raggedright
@@ -502,11 +515,145 @@
         \hspace*{-1.3cm}%
         \includegraphics[
           height=0.715\textheight
-        ]{../beamer-template/figures/tc_melt_pool_vertical.png}%
+        ]{../beamer/figures/tc_melt_pool_vertical.png}%
       }
     \end{column}
   \end{columns}
   \end{minipage}
+\end{frame}
+
+\begin{frame}{Bayesian Updating}
+  \vspace{-0.85em}
+  \setbeamerfont{block title}{size=\fontsize{19}{23}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{18}{22}\selectfont}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.40\textwidth}
+      \hspace*{1.30cm}%
+      \begin{minipage}[t]{\dimexpr\linewidth-1.30cm\relax}
+        \raggedright
+        \vspace*{1.00cm}
+        {\fontsize{23}{27}\selectfont
+        \textcolor{sffblue}{\textbf{Physics-informed correction}}\par}
+
+        \vspace{0.65em}
+        {\fontsize{20}{25}\selectfont
+        Eagar--Tsai provides a fast, structured prior across the full melt-pool
+        domain.
+
+        \vspace{0.8em}
+        Targeted TCAM simulations act as the high-fidelity ``ground truth'' that
+        teaches the model where and why the prior is wrong.
+
+        \vspace{0.8em}
+        The correction is learned without discarding the underlying ET physics.\par}
+      \end{minipage}
+    \end{column}
+
+    \begin{column}{0.56\textwidth}
+      \hfill
+      \begin{minipage}{0.82\linewidth}
+        \begin{block}{1. ET Physics Prior}
+          \centering
+          Predict temperature rapidly throughout the full melt-pool domain for
+          a spatial location $\mathbf{s}$ and process condition $\theta$.
+
+          \vspace{0.15em}
+          {\fontsize{20}{24}\selectfont
+          $T_{\mathrm{ET}}(\mathbf{s},\theta)$}
+        \end{block}
+      \end{minipage}
+      \hfill\strut\par
+
+      \vspace{-0.12em}
+      \centering
+      \begin{tikzpicture}
+        \draw[-{Stealth[length=3.2mm]},line width=2.2pt,sffblue]
+          (0,0.18) -- (0,-0.48);
+      \end{tikzpicture}
+      \vspace{-0.25em}
+
+      \hfill
+      \begin{minipage}{0.82\linewidth}
+        \begin{block}{2. TCAM Training Evidence}
+          \centering
+          Sample high-fidelity temperatures at selected spatial locations and
+          process conditions, then match them to the ET field.
+
+          \vspace{0.15em}
+          {\fontsize{20}{24}\selectfont
+          $T_{\mathrm{TCAM}}(\mathbf{s},\theta)$}
+        \end{block}
+      \end{minipage}
+      \hfill\strut\par
+
+      \vspace{-0.12em}
+      \centering
+      \begin{tikzpicture}
+        \draw[-{Stealth[length=3.2mm]},line width=2.2pt,sffblue]
+          (0,0.18) -- (0,-0.48);
+      \end{tikzpicture}
+      \vspace{-0.25em}
+
+      \hfill
+      \begin{minipage}{0.82\linewidth}
+        \begin{block}{3. GPR Discrepancy Model}
+          \centering
+          Train the Gaussian process on the structured error rather than
+          replacing the physics model with a purely data-driven predictor.
+
+          \vspace{0.15em}
+          {\fontsize{20}{24}\selectfont
+          $\Delta T=T_{\mathrm{TCAM}}-T_{\mathrm{ET}}$}
+        \end{block}
+      \end{minipage}
+      \hfill\strut\par
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Bayesian-Updated ET Model}
+  \vspace{-0.45em}
+  \begin{block}{Posterior Temperature Field}
+    \begin{columns}[c,onlytextwidth]
+      \begin{column}{0.56\textwidth}
+        ET supplies the physics-based baseline; the GPR posterior mean supplies
+        the TCAM-informed correction.
+      \end{column}
+      \begin{column}{0.40\textwidth}
+        \centering
+        {\fontsize{22}{27}\selectfont
+        $T_{\mathrm{updated}}=T_{\mathrm{ET}}+\mu_{\Delta T}$}
+      \end{column}
+    \end{columns}
+  \end{block}
+
+  \vspace{0.45em}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.32\textwidth}
+      \begin{block}{Spatial Correction}
+        Learns where and by how much ET over- or under-predicts temperature
+        throughout the melt pool.
+      \end{block}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \begin{block}{Process Sensitivity}
+        Across multiple TCAM conditions, learned feature length scales and
+        sensitivity reveal how $P$, $v$, $d_b$, and $A$ affect the thermal field
+        and melt-pool geometry.
+      \end{block}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \begin{block}{Predictive Uncertainty}
+        The posterior variance shows where the correction is trusted and where
+        another TCAM training point would add the most information.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.55em}
+  {\fontsize{16}{20}\selectfont\centering
+  The updated temperature field can then be propagated to melt-pool geometry,
+  $G$--$R$ conditions, and microstructure classification.\par}
 \end{frame}
 
 \begin{frame}{Closing}

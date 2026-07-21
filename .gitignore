@@ -15,5 +15,5 @@ cache/
 TC_Python/
 .tools/bin/
 .tools/downloads/
-beamer-template/figures/250_0.5
-beamer-template/figures/TCAM
+beamer/figures/250_0.5
+beamer/figures/TCAM

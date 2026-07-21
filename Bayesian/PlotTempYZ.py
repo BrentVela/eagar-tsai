@@ -11,16 +11,16 @@ from scipy.interpolate import griddata
 from scipy.ndimage import distance_transform_edt, label
 
 
-TEMPERATURE_CSV = Path("beamer-template/figures/250_0.5/ET_alloy0_250_0.5.csv")
-PARAVIEW_CSV = Path("beamer-template/figures/data/better_plane_resample.csv") # only need if USE_TCAM_MESH = False
-TCAM_MESH = Path("beamer-template/figures/data/result.e")
+TEMPERATURE_CSV = Path("beamer/figures/250_0.5/ET_alloy0_250_0.5.csv")
+PARAVIEW_CSV = Path("beamer/figures/data/better_plane_resample.csv") # only need if USE_TCAM_MESH = False
+TCAM_MESH = Path("beamer/figures/data/result.e")
 TCAM_TEMPERATURE_ARRAY = "temperature"
 USE_TCAM_MESH = True
-METADATA_CSV = Path("beamer-template/figures/250_0.5/ET_meta_alloy0_250_0.5.csv")
+METADATA_CSV = Path("beamer/figures/250_0.5/ET_meta_alloy0_250_0.5.csv")
 ET_X_UM = -10.0
 PARAVIEW_X_UM = -10.0
 OUTPUT_PNG = Path(
-    f"beamer-template/figures/TCAM/ET_TC_temp_yz_{ET_X_UM:g}um.png"
+    f"beamer/figures/TCAM/ET_TC_temp_yz_{ET_X_UM:g}um.png"
 )
 USE_TCAM_SLICE_MAX = False
 PLOT_Y_LIMIT_UM = 100.0

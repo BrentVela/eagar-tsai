@@ -13,14 +13,14 @@ from scipy.ndimage import distance_transform_edt, label
 
 
 TEMPERATURE_CSV = Path(
-    "beamer-template/figures/250_0.5/ET_alloy0_250_0.5.csv"
+    "beamer/figures/250_0.5/ET_alloy0_250_0.5.csv"
 )
-TCAM_MESH = Path("beamer-template/figures/data/result.e")
+TCAM_MESH = Path("beamer/figures/data/result.e")
 TCAM_TEMPERATURE_ARRAY = "temperature"
 METADATA_CSV = Path(
-    "beamer-template/figures/250_0.5/ET_meta_alloy0_250_0.5.csv"
+    "beamer/figures/250_0.5/ET_meta_alloy0_250_0.5.csv"
 )
-OUTPUT_DIR = Path("beamer-template/figures/TCAM")
+OUTPUT_DIR = Path("beamer/figures/TCAM")
 
 SLICE_X_UM = (0.0, 80.0, 160.0)
 PLOT_Y_LIMIT_UM = 100.0
