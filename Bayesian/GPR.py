@@ -37,9 +37,9 @@ from scipy.spatial import cKDTree
 # USER SETTINGS
 # ============================================================
 
-CASE_ROOT = Path("CalcFiles/Bayesian_Data/New")
-ET_DIR = CASE_ROOT / "ET" / "alloy0" / "250_0.5_5um"
-TCAM_DIR = CASE_ROOT / "TCAM" / "alloy0_250_0.5"
+CASE_ROOT = Path("beamer/figures")
+ET_DIR = CASE_ROOT / "bayesian"
+TCAM_DIR = CASE_ROOT / "TCAM"
 
 ET_CSV = ET_DIR / "ET_0_250W_0.5ms.csv"
 ET_META_CSV = ET_DIR / "ET_meta_0_250W_0.5ms.csv"
@@ -81,7 +81,7 @@ def load_process_inputs(meta_csv):
         "Cp": float(meta["specific_heat_j_kgk"]),
         "rho": float(meta["density_kg_m3"]),
         "Tliq": float(meta["liquidus_temperature_k"]),
-        "beam_diameter_m": float(meta["beam_diameter_m"]),
+        "beam_diameter_m": float(meta["beam_diameter_m"]), # leave out inputs that dont change
     }
 
 
@@ -140,7 +140,7 @@ def add_process_inputs(df, inputs):
 
 def add_physics_features(df, base_temperature_k=BASE_TEMPERATURE_K):
     df = df.copy()
-    df["r_xy"] = np.sqrt(df["x"] ** 2 + df["y"] ** 2)
+    df["r_xy"] = np.sqrt(df["x"] ** 2 + df["y"] ** 2) #try removing x,y,z inputs
     df["r_3d"] = np.sqrt(df["x"] ** 2 + df["y"] ** 2 + df["z"] ** 2)
     return df
 

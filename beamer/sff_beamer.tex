@@ -40,76 +40,178 @@
   \titlepage
 \end{frame}
 
-\begin{frame}{Core Thesis}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.32\textwidth}
-      \begin{block}{Composition}
-        \centering
-        \includegraphics[width=\linewidth,height=0.28\textheight,keepaspectratio]{figures/affine_projection_nimplex_nb_cr_v_w_zr_20pct_pentagon_clean.png}
+\begin{frame}{The Design Space Is Large}
+  \setbeamerfont{block title}{size=\fontsize{22}{26}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{19}{23}\selectfont}
+  \setbeamerfont{itemize/enumerate body}{size=\fontsize{19}{23}\selectfont}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \centering
+      \begin{tikzpicture}
+        \node[anchor=south west,inner sep=0pt] (compositionmap) at (0,0) {
+          \includegraphics[width=\linewidth,height=0.66\textheight,keepaspectratio]{figures/affine_projection_nimplex_nb_cr_v_w_zr_20pct_pentagon_clean.png}
+        };
+        \begin{scope}[x={(compositionmap.south east)},y={(compositionmap.north west)}]
+          \node[anchor=south,font=\fontsize{20}{24}\selectfont\bfseries] at (0.50,0.955) {W};
+          \node[anchor=west,font=\fontsize{20}{24}\selectfont\bfseries] at (0.925,0.65) {Nb};
+          \node[anchor=north,font=\fontsize{20}{24}\selectfont\bfseries] at (0.755,0.115) {Ta};
+          \node[anchor=north,font=\fontsize{20}{24}\selectfont\bfseries] at (0.235,0.115) {Mo};
+          \node[anchor=east,font=\fontsize{20}{24}\selectfont\bfseries] at (0.070,0.65) {Hf};
+        \end{scope}
+      \end{tikzpicture}
 
-        \vspace{0.25em}
-        \begin{itemize}
-          \item A 5-element affine projection represents the accessible composition simplex.
-          \item Interior coloring encodes local element content across the design space.
-          \item Bayesian updates narrow the search to feasible LPBF compositions.
-        \end{itemize}
-      \end{block}
+      \vspace{0.3em}
+      {\fontsize{15}{18}\selectfont Five-element projection of a multicomponent composition space.\par}
     \end{column}
-    \begin{column}{0.32\textwidth}
-      \begin{block}{Solidification Condition}
-        \centering
-        \includegraphics[width=\linewidth,height=0.27\textheight,keepaspectratio]{figures/et_solidification_condition.png}
+    \begin{column}{0.04\textwidth}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      {\fontsize{22}{27}\selectfont\centering\textcolor{sffblue}{\textbf{Each alloy has many possible process conditions}}\par}
 
-        \vspace{0.2em}
-        \begin{itemize}
-          \item Real `eagar-tsai` VTI render with the symmetry-plane melt-pool slice.
-          \item Process inputs set the thermal gradient, cooling rate, and pool geometry.
-        \end{itemize}
+      \vspace{0.8em}
+      \begin{block}{Composition--Process Space}
+        {\fontsize{21}{25}\selectfont\centering
+        Composition
+        $\;\times\;P\;\times\;v\;\times\;A$\par}
       \end{block}
+
+      \vspace{0.45em}
+      \begin{itemize}
+        \setlength{\itemsep}{0.65em}
+        \item Cannot practically evaluate every combination with high-fidelity calculations.
+        \item Rapid thermal prediction is needed for high-throughput screening.
+      \end{itemize}
     \end{column}
-    \begin{column}{0.32\textwidth}
-      \begin{alertblock}{Solidified Microstructure}
-        \begin{itemize}
-          \item Microstructure emerges from the coupling of chemistry and thermal history.
-          \item Predicted G/R conditions map to expected grain morphology and phase selection.
-          \item The workflow targets rapid microstructure prediction from composition to final structure.
-        \end{itemize}
-      \end{alertblock}
+    \begin{column}{0.04\textwidth}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{Motivation and Constraints}
-  \vspace{-0.35em}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.49\textwidth}
-      {\fontsize{20}{24}\selectfont\textcolor{sffblue}{\textbf{The design target is microstructure}}\par}
-      \vspace{0.35em}
-      \begin{itemize}
-        \item LPBF alloy design couples composition, laser power, scan speed, and cooling history.
-        \item Grain morphology and phase selection respond to local thermal gradients, $G$, and solidification rates, $R$.
-        \item Screening must move quickly from process inputs to a microstructure-relevant prediction.
-      \end{itemize}
+\begin{frame}[t]{Core Thesis}
+  \setbeamerfont{block title}{size=\fontsize{22}{26}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{20}{24}\selectfont}
+  \setbeamerfont{itemize/enumerate body}{size=\fontsize{20}{24}\selectfont}
+  \vspace{0.90cm}
 
-      \vspace{0.25em}
-      \begin{alertblock}{Constraint}
-        Eagar--Tsai is fast enough for high-throughput screening, but its simplified thermal physics must be corrected before it can be trusted for microstructure decisions.
+  {\fontsize{19}{23}\selectfont\centering
+  \textcolor{sffblue}{\textbf{ET is fast enough for high-throughput screening, but not yet reliable enough for microstructure decisions.}}\par}
+
+  \vspace{0.55em}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.27\textwidth}
+      \begin{block}{\centering Eagar--Tsai}
+        \begin{minipage}[t][0.43\textheight][t]{\linewidth}
+        \begin{minipage}[c][0.19\textheight][c]{\linewidth}
+          \centering
+          \includegraphics[width=\linewidth,height=0.18\textheight,keepaspectratio]{figures/paraview_ET.png}
+        \end{minipage}
+
+        \vspace{0.35em}
+        \begin{itemize}
+          \setlength{\itemsep}{0.55em}
+          \item Fast, but has simplified physics
+          \item Run across the design space
+        \end{itemize}
+        \end{minipage}
+      \end{block}
+    \end{column}
+    \begin{column}{0.05\textwidth}
+      \centering
+      {\fontsize{30}{34}\selectfont $+$}
+    \end{column}
+    \begin{column}{0.27\textwidth}
+      \begin{block}{\centering Thermo-Calc AM Module}
+        \begin{minipage}[t][0.43\textheight][t]{\linewidth}
+        \begin{minipage}[c][0.19\textheight][c]{\linewidth}
+          \centering
+          \includegraphics[width=\linewidth,height=0.18\textheight,keepaspectratio]{figures/paraview_TCAM.png}
+        \end{minipage}
+
+        \vspace{0.35em}
+        \begin{itemize}
+          \setlength{\itemsep}{0.55em}
+          \item Higher fidelity, but more computationally expensive
+          \item Run at selected conditions
+        \end{itemize}
+        \end{minipage}
+      \end{block}
+    \end{column}
+    \begin{column}{0.07\textwidth}
+      \centering
+      {\fontsize{30}{34}\selectfont $\longrightarrow$}
+    \end{column}
+    \begin{column}{0.29\textwidth}
+      \begin{alertblock}{\centering Bayesian-Updated ET}
+        \begin{minipage}[t][0.43\textheight][t]{\linewidth}
+        \begin{minipage}[c][0.19\textheight][c]{\linewidth}
+          \centering
+          \includegraphics[width=\linewidth,height=0.18\textheight,keepaspectratio]{figures/paraview_corrected.png}
+        \end{minipage}
+
+        \vspace{0.35em}
+        \begin{itemize}
+          \setlength{\itemsep}{0.55em}
+          \item Learn the TCAM--ET discrepancy
+          \item Correct the ET temperature field
+        \end{itemize}
+        \end{minipage}
       \end{alertblock}
     \end{column}
-    \begin{column}{0.47\textwidth}
-      \centering
-      \includegraphics[width=\linewidth,height=0.55\textheight,keepaspectratio]{../beamer/figures/phase_field_microstructure_proxy.png}
+  \end{columns}
 
-      \vspace{0.2em}
-      {\fontsize{14}{17}\selectfont Illustrative phase-field style proxy: the model must connect melt-pool thermal history to grain morphology and phase contrast.\par}
+  \vspace{0.65em}
+  \begin{block}{Microstructure Prediction}
+    {\fontsize{21}{25}\selectfont\centering
+    Corrected 3D temperature field
+    \quad$\longrightarrow$\quad
+    $G$ and $R$
+    \quad$\longrightarrow$\quad
+    KGT
+    \quad$\longrightarrow$\quad
+    As-solidified microstructure\par}
+  \end{block}
+\end{frame}
+
+\begin{frame}[t]{Why Predict Microstructure?}
+  \setbeamerfont{block title}{size=\fontsize{22}{26}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{20}{24}\selectfont}
+  \setbeamerfont{itemize/enumerate body}{size=\fontsize{20}{24}\selectfont}
+  \vspace{0.50cm}
+  {\fontsize{21}{25}\selectfont\centering\textcolor{sffblue}{\textbf{Process parameters affect performance through the thermal history and resulting microstructure.}}\par}
+
+  \vspace{0.75cm}
+  {\fontsize{18}{22}\selectfont\centering
+  \textbf{Composition + Process}
+  \quad$\longrightarrow$\quad
+  \textbf{Thermal History}
+  \quad$\longrightarrow$\quad
+  \textbf{Microstructure}\par}
+
+  \vspace{1.15cm}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \vspace{0.70cm}
+      \begin{itemize}
+        \setlength{\itemsep}{0.65em}
+        \item Microstructure controls strength, ductility, anisotropy, and defect sensitivity.
+        \item A sound melt pool can still solidify into the wrong morphology.
+        \item Predicting structure reduces trial-and-error printing.
+        \item Fast predictions enable composition and process screening.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.52\textheight,keepaspectratio]{../beamer/figures/phase_field_microstructure_proxy.png}
 
       \vspace{0.25em}
-      {\fontsize{13}{16}\selectfont\textcolor{neutralmid}{Key limits: temperature-invariant properties, analytical melt-pool assumptions, and lower fidelity than FEM.}\par}
+      {\fontsize{14}{17}\selectfont Illustrative phase-field style microstructure proxy: thermal history must be connected to grain morphology and phase contrast.\par}
     \end{column}
   \end{columns}
 \end{frame}
 
 \begin{frame}{Cellular Automata Solidification Modes}
+  \setbeamerfont{block title}{size=\fontsize{21}{25}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{22}{27}\selectfont}
   \vspace{-0.45em}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.31\textwidth}
@@ -141,9 +243,12 @@
     \end{column}
   \end{columns}
 
-  \vspace{0.25em}
-  \begin{alertblock}{Use in this workflow}
-    Eagar--Tsai supplies fast local $G$ and $R$ fields; Bayesian correction should make those fields reliable enough to classify morphology regime.
+  \vspace{0.70cm}
+  \begin{alertblock}{{\fontsize{22}{26}\selectfont Use in this workflow}}
+    \vspace{0.25em}
+    {\fontsize{24}{29}\selectfont
+    Eagar--Tsai supplies fast local $G$ and $R$ fields; Bayesian correction should make those fields reliable enough to classify the microstructure.\par}
+    \vspace{0.25em}
   \end{alertblock}
 \end{frame}
 
@@ -294,7 +399,15 @@
       \centering
       \begin{minipage}[t][0.68\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../beamer/figures/250_0.5/temperature_field_alloy0_250_0.5.png}
+        \begin{tikzpicture}
+          \node[anchor=south west,inner sep=0pt] (etxy) at (0,0) {
+            \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../beamer/figures/250_0.5/temperature_field_alloy0_250_0.5.png}
+          };
+          \begin{scope}[x={(etxy.south east)},y={(etxy.north west)}]
+            \draw[-{Stealth[length=3.2mm]},draw=white,line width=2.4pt]
+              (0.78,0.93) -- (0.60,0.93);
+          \end{scope}
+        \end{tikzpicture}
       \end{minipage}
 
       \vspace{0.25em}
@@ -304,7 +417,15 @@
       \centering
       \begin{minipage}[t][0.68\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.png}
+        \begin{tikzpicture}
+          \node[anchor=south west,inner sep=0pt] (etthree) at (0,0) {
+            \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.png}
+          };
+          \begin{scope}[x={(etthree.south east)},y={(etthree.north west)}]
+            \draw[-{Stealth[length=3.2mm]},draw=white,line width=2.4pt]
+              (0.25,0.74) -- (0.44,0.85);
+          \end{scope}
+        \end{tikzpicture}
       \end{minipage}
 
       \vspace{0.25em}
@@ -383,7 +504,15 @@
       \centering
       \begin{minipage}[t][0.67\textheight][c]{\linewidth}
         \centering
-        \includegraphics[width=\linewidth,height=0.67\textheight,keepaspectratio]{../beamer/figures/TCAM_alloy0_250_0.5.png}
+        \begin{tikzpicture}
+          \node[anchor=south west,inner sep=0pt] (tcamview) at (0,0) {
+            \includegraphics[width=\linewidth,height=0.67\textheight,keepaspectratio]{../beamer/figures/TCAM_alloy0_250_0.5.png}
+          };
+          \begin{scope}[x={(tcamview.south east)},y={(tcamview.north west)}]
+            \draw[-{Stealth[length=3.2mm]},draw=white,line width=2.4pt]
+              (0.38,0.18) -- (0.62,0.18);
+          \end{scope}
+        \end{tikzpicture}
       \end{minipage}
 
       \vspace{0.2em}
@@ -656,16 +785,50 @@
   $G$--$R$ conditions, and microstructure classification.\par}
 \end{frame}
 
-\begin{frame}{Closing}
-  \begin{block}{Takeaway}
-    End with the decision, ask, or technical conclusion you want the audience to remember.
-  \end{block}
-  \vspace{0.5em}
-  \begin{itemize}
-    \item \deliverable{Deliverable}: Name the concrete output.
-    \item \risk{Primary risk}: Name the hardest unresolved issue.
-    \item \stage{Immediate next step}: Name the action that starts now.
-  \end{itemize}
+\begin{frame}[t]{Closing}
+  \setbeamerfont{block title}{size=\fontsize{20}{24}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{18}{22}\selectfont}
+  \vspace{0.75cm}
+  {\fontsize{27}{32}\selectfont\centering
+  \textbf{The same morphology label does not mean the same underlying physics.}\par}
+
+  \vspace{1.0em}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Why correction matters}
+        ET and TCAM may both predict ``columnar'' while disagreeing on:
+
+        \vspace{0.45em}
+        \begin{itemize}
+          \setlength{\itemsep}{0.85em}
+          \item Thermal gradient $G$
+          \item Solidification rate $R$
+          \item Morphology-transition locations
+          \item Three-dimensional melt-pool geometry
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \begin{block}{Goal of the Bayesian update}
+        \begin{itemize}
+          \setlength{\itemsep}{0.65em}
+          \item Preserve ET speed and simplicity
+          \item Recover FEM-informed thermal fidelity
+          \item Propagate the corrected field to $G$--$R$ conditions and KGT microstructure predictions
+        \end{itemize}
+      \end{block}
+
+      \vspace{0.55em}
+      \begin{alertblock}{Measure of success}
+        \begin{itemize}
+          \setlength{\itemsep}{0.5em}
+          \item Withheld TCAM conditions
+          \item Accurate temperature fields and melt-pool geometry
+          \item Improved solidification and microstructure predictions
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \end{document}

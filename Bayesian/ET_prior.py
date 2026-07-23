@@ -22,7 +22,7 @@ from eagar_tsai import (
 
 
 DEFAULT_INPUT = Path("effective_cp_data.xlsx")
-DEFAULT_OUTPUT_DIR = Path("CalcFiles/Bayesian_Data/New/ET/alloy0/250_0.5_5um")
+DEFAULT_OUTPUT_DIR = Path("beamer/figures/bayesian")
 DEFAULT_ROW_INDEX = 2
 
 COLUMN_ALIASES = {
@@ -265,7 +265,7 @@ def parse_args():
     parser.add_argument("--x-length-um", type=float, default=600.0)
     parser.add_argument("--y-length-um", type=float, default=200.0)
     parser.add_argument("--z-depth-um", type=float, default=250.0)
-    parser.add_argument("--spatial-resolution-um", type=float, default=1.0)
+    parser.add_argument("--spatial-resolution-um", type=float, default=2.0)
     parser.add_argument("--workers", type=int, default=12)
     parser.add_argument("--chunk-size", type=int, default=10)
     parser.add_argument("--full-y", action="store_true", help="Mirror y to export the full symmetric melt pool.")

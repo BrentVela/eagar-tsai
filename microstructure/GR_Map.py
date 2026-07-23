@@ -173,8 +173,8 @@ def get_CET_lines(
     primary_phase="BCC_B2",
     interfacial_energy=0.5,
     nb_nucleations_site=2e15,
-    nucleation_undercooling=2.5,
-    equiaxed_exponent=3.4,
+    nucleation_undercooling=2.5, # default
+    equiaxed_exponent=3.4, # default
     disable_output=True,
     composition_unit=CompositionUnit.MOLE_FRACTION,
     r_range=(-7, 1),
