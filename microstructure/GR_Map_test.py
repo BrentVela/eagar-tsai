@@ -8,7 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # Edit these parameters before each run.
 excel_path = REPO_ROOT / "effective_cp_data.xlsx"
 row_index = 2  # EXCEL ROW - 2
-element_cols = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V"]
+element_cols = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V", "Co", "Cr", "Fe", "Mn", "Ni"]
 thermo_db = "TCHEA8"
 kinetic_db = "MOBHEA3"
 primary_phase = "BCC_B2"

@@ -5,6 +5,8 @@ import sys
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib.colors as colors
 import numpy as np
 import pandas as pd
 from scipy.interpolate import griddata
@@ -13,9 +15,39 @@ from scipy.ndimage import gaussian_filter
 from tc_python import CompositionUnit, TCPython
 
 try:
-    from .GR_Map import _load_alloy_from_excel, _tc_python_cache_dir, get_CET_grid
+    from .GR_Map import (
+        DEFAULT_CET_EQUIAXED_EXPONENT,
+        DEFAULT_CET_NUCLEATION_SITES,
+        DEFAULT_CET_NUCLEATION_UNDERCOOLING_K,
+        DEFAULT_PRIMARY_PHASE,
+        _load_alloy_from_excel,
+        _load_interfacial_energy_from_excel,
+        _load_liquidus_from_excel,
+        _cet_grid_cache_metadata,
+        _cet_grid_npz_path,
+        _load_cet_grid_npz,
+        _save_cet_grid_npz,
+        _tc_python_cache_dir,
+        get_CET_grid,
+        resolve_interfacial_energy,
+    )
 except ImportError:
-    from GR_Map import _load_alloy_from_excel, _tc_python_cache_dir, get_CET_grid
+    from GR_Map import (
+        DEFAULT_CET_EQUIAXED_EXPONENT,
+        DEFAULT_CET_NUCLEATION_SITES,
+        DEFAULT_CET_NUCLEATION_UNDERCOOLING_K,
+        DEFAULT_PRIMARY_PHASE,
+        _load_alloy_from_excel,
+        _load_interfacial_energy_from_excel,
+        _load_liquidus_from_excel,
+        _cet_grid_cache_metadata,
+        _cet_grid_npz_path,
+        _load_cet_grid_npz,
+        _save_cet_grid_npz,
+        _tc_python_cache_dir,
+        get_CET_grid,
+        resolve_interfacial_energy,
+    )
 
 
 LIQUIDUS_CSV = ("beamer/figures/data/TCAM_GR_alloy0_250_0.5.csv")
@@ -27,10 +59,12 @@ SMOOTHING_SIGMA = 0.0
 POINT_SIZE = 10
 MICRON_SCALE_THRESHOLD = 1.0e-2
 GRADIENT_K_PER_UM_THRESHOLD = 1.0e4
+GR_MAP_COLOR_RANGE = (-1.1, 1.0)
+EQUIAXED_COLORBAR_MIN_FRACTION = 0.01
 
 EXCEL_PATH = "effective_cp_data.xlsx"
 ROW_INDEX = 2  # Alloy 0; zero-based pandas row index.
-ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V"]
+ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V", "Co", "Cr", "Fe", "Mn", "Ni"]
 MAP_SOURCE = "excel_alloy"
 ET_COLUMNS = {"x", "y", "z", "G", "R"}
 PARAVIEW_COLUMNS = {
@@ -44,15 +78,16 @@ MAP_CONFIGS = {
     "excel_alloy": {
         "thermo_db": "TCHEA8",
         "kinetic_db": "MOBHEA3",
-        "primary_phase": "BCC_B2",
-        "interfacial_energy": 0.5,
+        "primary_phase": DEFAULT_PRIMARY_PHASE,
+        "interfacial_energy": None,
         "composition_unit": CompositionUnit.MOLE_FRACTION,
     },
     "cu70ni30": {
         "thermo_db": "TCHEA7",
         "kinetic_db": "MOBHEA3",
         "primary_phase": "FCC_L12",
-        "interfacial_energy": 0.5,
+        "interfacial_energy": None,
+        "liquidus_temperature": 1620.0,
         "composition_unit": CompositionUnit.MASS_PERCENT,
         "elements": ["Cu", "Ni"],
         "solutes": {"Ni": 30.0},
@@ -192,10 +227,67 @@ def _calculate_cet_grid(
     config = map_configs[map_source]
     if map_source == "excel_alloy":
         elements, solutes = _load_alloy_from_excel(excel_path, row_index, element_cols)
+        liquidus_temperature = _load_liquidus_from_excel(excel_path, row_index)
         element_names = list(elements.keys())
     else:
         solutes = config["solutes"]
         element_names = config["elements"]
+        liquidus_temperature = config["liquidus_temperature"]
+
+    interfacial_energy = config.get("interfacial_energy")
+    nb_nucleations_site = config.get(
+        "nb_nucleations_site",
+        DEFAULT_CET_NUCLEATION_SITES,
+    )
+    nucleation_undercooling = config.get(
+        "nucleation_undercooling",
+        DEFAULT_CET_NUCLEATION_UNDERCOOLING_K,
+    )
+    equiaxed_exponent = config.get(
+        "equiaxed_exponent",
+        DEFAULT_CET_EQUIAXED_EXPONENT,
+    )
+    spreadsheet_interfacial_energy = None
+    if map_source == "excel_alloy" and interfacial_energy is None:
+        spreadsheet_interfacial_energy = _load_interfacial_energy_from_excel(
+            excel_path,
+            row_index,
+        )
+        interfacial_energy = spreadsheet_interfacial_energy
+        if (
+            config.get("report_interfacial_energy", True)
+            and interfacial_energy is not None
+        ):
+            print(
+                "Using spreadsheet interfacial energy: "
+                f"{interfacial_energy:.6g} J/m^2"
+            )
+
+    grid_metadata = None
+    grid_npz_path = None
+    if interfacial_energy is not None:
+        grid_metadata = _cet_grid_cache_metadata(
+            thermodynamic_database=config["thermo_db"],
+            kinetic_database=config["kinetic_db"],
+            element_names=element_names,
+            solutes=solutes,
+            primary_phase=config["primary_phase"],
+            interfacial_energy=interfacial_energy,
+            nb_nucleations_site=nb_nucleations_site,
+            nucleation_undercooling=nucleation_undercooling,
+            equiaxed_exponent=equiaxed_exponent,
+            composition_unit=config["composition_unit"],
+        )
+        grid_npz_path = _cet_grid_npz_path(grid_metadata)
+        cached_grid = _load_cet_grid_npz(grid_npz_path)
+        if cached_grid is not None:
+            print(f"Loaded CET grid NPZ: {grid_npz_path}")
+            return (
+                cached_grid[0],
+                cached_grid[1],
+                cached_grid[2],
+                interfacial_energy,
+            )
 
     with TCPython() as session:
         session.set_cache_folder(_tc_python_cache_dir())
@@ -204,23 +296,78 @@ def _calculate_cet_grid(
             config["kinetic_db"],
             element_names,
         ).get_system()
+        interfacial_energy = resolve_interfacial_energy(
+            system,
+            solutes,
+            config["primary_phase"],
+            liquidus_temperature,
+            interfacial_energy=interfacial_energy,
+            composition_unit=config["composition_unit"],
+            report=(
+                config.get("report_interfacial_energy", True)
+                and spreadsheet_interfacial_energy is None
+            ),
+        )
 
-        r_grid, g_grid, equiaxed_fraction, _, _, _ = get_CET_grid(
+        if grid_metadata is None:
+            grid_metadata = _cet_grid_cache_metadata(
+                thermodynamic_database=config["thermo_db"],
+                kinetic_database=config["kinetic_db"],
+                element_names=element_names,
+                solutes=solutes,
+                primary_phase=config["primary_phase"],
+                interfacial_energy=interfacial_energy,
+                nb_nucleations_site=nb_nucleations_site,
+                nucleation_undercooling=nucleation_undercooling,
+                equiaxed_exponent=equiaxed_exponent,
+                composition_unit=config["composition_unit"],
+            )
+            grid_npz_path = _cet_grid_npz_path(grid_metadata)
+            cached_grid = _load_cet_grid_npz(grid_npz_path)
+            if cached_grid is not None:
+                print(f"Loaded CET grid NPZ: {grid_npz_path}")
+                return (
+                    cached_grid[0],
+                    cached_grid[1],
+                    cached_grid[2],
+                    interfacial_energy,
+                )
+
+        (
+            r_grid,
+            g_grid,
+            equiaxed_fraction,
+            tip_radius,
+            dendrite_tip_undercooling,
+            nan_points,
+        ) = get_CET_grid(
             system,
             solutes,
             primary_phase=config["primary_phase"],
-            interfacial_energy=config["interfacial_energy"],
-            nb_nucleations_site=4.0e11,
-            nucleation_undercooling=4.0,
-            equiaxed_exponent=3.13,
+            interfacial_energy=interfacial_energy,
+            nb_nucleations_site=nb_nucleations_site,
+            nucleation_undercooling=nucleation_undercooling,
+            equiaxed_exponent=equiaxed_exponent,
             disable_output=True,
             composition_unit=config["composition_unit"],
         )
+        _save_cet_grid_npz(
+            grid_npz_path,
+            grid_metadata,
+            r_grid,
+            g_grid,
+            equiaxed_fraction,
+            tip_radius,
+            dendrite_tip_undercooling,
+            nan_points,
+        )
+        print(f"Wrote CET grid NPZ: {grid_npz_path}")
 
     return (
         np.asarray(r_grid),
         np.asarray(g_grid),
         np.asarray(equiaxed_fraction, dtype=float),
+        interfacial_energy,
     )
 
 
@@ -247,6 +394,14 @@ def _classify_from_gr_map(df, r_grid, g_grid, equiaxed_fraction):
     return classified
 
 
+def _equiaxed_colormap():
+    """Return the nonnegative-fraction half of the GR-map color scale."""
+    gr_norm = colors.Normalize(vmin=GR_MAP_COLOR_RANGE[0], vmax=GR_MAP_COLOR_RANGE[1])
+    positive_start = gr_norm(0.0)
+    sampled_colors = cm.seismic_r(np.linspace(positive_start, 1.0, 256))
+    return colors.ListedColormap(sampled_colors, name="equiaxed_seismic_r")
+
+
 def plot_projected_liquidus(
     liquidus_csv=LIQUIDUS_CSV,
     output_path=OUTPUT_PATH,
@@ -266,7 +421,7 @@ def plot_projected_liquidus(
     if INTERPOLATE_PARAVIEW and liquidus.attrs["is_paraview"]:
         projected = _interpolate_projected_points(projected)
 
-    r_grid, g_grid, equiaxed_fraction = _calculate_cet_grid(
+    r_grid, g_grid, equiaxed_fraction, interfacial_energy = _calculate_cet_grid(
         excel_path=excel_path,
         row_index=row_index,
         element_cols=element_cols,
@@ -279,23 +434,42 @@ def plot_projected_liquidus(
         g_grid,
         equiaxed_fraction,
     )
+    projected.attrs["interfacial_energy_j_m2"] = interfacial_energy
     projected["y_plot"] = projected["y"].round(0)
     projected["z_plot"] = projected["z"].round(0)
 
-    planar = projected["equiaxed_fraction"] == -1.0
-    cellular_dendritic = ~planar
+    fraction = projected["equiaxed_fraction"].to_numpy(dtype=float)
+    planar = fraction == -1.0
+    columnar = fraction == 0.0
+    equiaxed = ~(planar | columnar)
+    equiaxed_cmap = _equiaxed_colormap()
+    equiaxed_norm = colors.Normalize(vmin=0.0, vmax=1.0, clip=True)
+
     columnar_y = np.concatenate(
         [
-            projected.loc[cellular_dendritic, "y_plot"].to_numpy(dtype=float),
-            -projected.loc[cellular_dendritic, "y_plot"].to_numpy(dtype=float),
+            projected.loc[columnar, "y_plot"].to_numpy(dtype=float),
+            -projected.loc[columnar, "y_plot"].to_numpy(dtype=float),
         ]
     )
     columnar_z = np.concatenate(
         [
-            projected.loc[cellular_dendritic, "z_plot"].to_numpy(dtype=float),
-            projected.loc[cellular_dendritic, "z_plot"].to_numpy(dtype=float),
+            projected.loc[columnar, "z_plot"].to_numpy(dtype=float),
+            projected.loc[columnar, "z_plot"].to_numpy(dtype=float),
         ]
     )
+    equiaxed_y = np.concatenate(
+        [
+            projected.loc[equiaxed, "y_plot"].to_numpy(dtype=float),
+            -projected.loc[equiaxed, "y_plot"].to_numpy(dtype=float),
+        ]
+    )
+    equiaxed_z = np.concatenate(
+        [
+            projected.loc[equiaxed, "z_plot"].to_numpy(dtype=float),
+            projected.loc[equiaxed, "z_plot"].to_numpy(dtype=float),
+        ]
+    )
+    equiaxed_values = np.concatenate([fraction[equiaxed], fraction[equiaxed]])
     planar_y = np.concatenate(
         [
             projected.loc[planar, "y_plot"].to_numpy(dtype=float),
@@ -313,12 +487,23 @@ def plot_projected_liquidus(
     ax.scatter(
         columnar_y,
         columnar_z,
-        c="#dfe3ff",
+        color=equiaxed_cmap(equiaxed_norm(0.0)),
         marker="o",
         s=POINT_SIZE,
         linewidths=0,
         alpha=1.0,
         label="Columnar",
+    )
+    ax.scatter(
+        equiaxed_y,
+        equiaxed_z,
+        c=equiaxed_values,
+        cmap=equiaxed_cmap,
+        norm=equiaxed_norm,
+        marker="o",
+        s=POINT_SIZE,
+        linewidths=0,
+        alpha=1.0,
     )
     ax.scatter(
         planar_y,
@@ -330,6 +515,12 @@ def plot_projected_liquidus(
         alpha=1.0,
         label="Planar",
     )
+    if np.any(fraction >= EQUIAXED_COLORBAR_MIN_FRACTION):
+        equiaxed_mapper = cm.ScalarMappable(norm=equiaxed_norm, cmap=equiaxed_cmap)
+        equiaxed_mapper.set_array([])
+        colorbar = fig.colorbar(equiaxed_mapper, ax=ax, pad=0.02)
+        colorbar.set_label("Equiaxed fraction", fontsize=label_fontsize)
+        colorbar.ax.tick_params(labelsize=tick_fontsize)
 
     ax.set_aspect("equal", adjustable="box")
     ax.set_xlabel("y (um)", fontsize=label_fontsize)
@@ -345,7 +536,9 @@ def plot_projected_liquidus(
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
-    planar_count = int((projected["equiaxed_fraction"] == -1.0).sum())
+    planar_count = int(planar.sum())
+    columnar_count = int(columnar.sum())
+    equiaxed_count = int(equiaxed.sum())
     print(f"Wrote {output_path}")
     print(
         "Projected {count} positive-R liquidus points from x = {xmin:.3f} to {xmax:.3f} um. "
@@ -357,7 +550,11 @@ def plot_projected_liquidus(
             z=deepest["z"],
         )
     )
-    print(f"Planar-classified points: {planar_count} / {len(projected)}")
+    print(
+        "Microstructure-classified points: "
+        f"planar={planar_count}, columnar={columnar_count}, "
+        f"equiaxed={equiaxed_count} / {len(projected)}"
+    )
     return output_path, deepest, projected
 
 

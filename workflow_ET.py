@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Regenerate ET data products and presentation figures for one alloy row.
 
-Run without ``--steps`` for the full ET-to-microstructure pipeline, or select
-individual steps to reuse intermediate files already present in the output
-directory.
+Run without ``--steps`` for the VTI-based ET-to-microstructure pipeline, or
+select individual steps to reuse intermediate files already present in the
+output directory. The large tabular temperature export is optional.
 """
 
 import argparse
@@ -16,6 +16,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from microstructure.GR_Map import (
+    DEFAULT_CET_EQUIAXED_EXPONENT,
+    DEFAULT_CET_NUCLEATION_SITES,
+    DEFAULT_CET_NUCLEATION_UNDERCOOLING_K,
+    DEFAULT_PRIMARY_PHASE,
+)
 from eagar_tsai import (
     BeamParameters,
     MaterialProperties,
@@ -25,16 +31,15 @@ from eagar_tsai import (
 )
 from ETtoVTI import export_eagar_tsai_vti
 DEFAULT_EXCEL = "effective_cp_data.xlsx"
-DEFAULT_ROW_INDEX = 32 # EXCEL ROW - 2
-DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V"]
+DEFAULT_ROW_INDEX = 2 # EXCEL ROW - 2
+DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V", "Co", "Cr", "Fe", "Mn", "Ni"]
 DEFAULT_CALC_ROOT = "CalcFiles/Test21"
 
 DEFAULT_THERMO_DB = "TCHEA8"
 DEFAULT_KINETIC_DB = "MOBHEA3"
-DEFAULT_PRIMARY_PHASE = "BCC_B2"
-DEFAULT_INTERFACIAL_ENERGY = 0.5
+DEFAULT_INTERFACIAL_ENERGY_OVERRIDE = None
 
-ALL_STEPS = (
+STEP_ORDER = (
     "temperature-field",
     "temperature-volume",
     "temperature-3d",
@@ -42,6 +47,9 @@ ALL_STEPS = (
     "gr-map",
     "gr-projection",
     "microstructure",
+)
+DEFAULT_STEPS = tuple(
+    step for step in STEP_ORDER if step != "temperature-volume"
 )
 
 DEFAULT_DOMAIN = SimulationDomain(
@@ -72,6 +80,12 @@ def _format_number(value):
     return f"{float(value):g}"
 
 
+def _format_identifier(value):
+    if isinstance(value, str):
+        return value.strip()
+    return _format_number(value)
+
+
 def _load_process_inputs(excel_path, row_index):
     df = pd.read_excel(excel_path)
     missing_columns = [column for column in INPUT_COLUMNS.values() if column not in df.columns]
@@ -96,9 +110,13 @@ def _load_process_inputs(excel_path, row_index):
 
 def _alloy_id(row, row_index):
     if "Alloy" in row.index and not pd.isna(row["Alloy"]):
-        return _format_number(row["Alloy"])
+        alloy_id = _format_identifier(row["Alloy"])
+        if alloy_id:
+            return alloy_id
     if "Unnamed: 0" in row.index and not pd.isna(row["Unnamed: 0"]):
-        return _format_number(row["Unnamed: 0"])
+        alloy_id = _format_identifier(row["Unnamed: 0"])
+        if alloy_id:
+            return alloy_id
     return str(row_index)
 
 
@@ -253,7 +271,7 @@ def _generate_temperature_field(args, process_df, paths):
 
 
 def _generate_temperature_volume(args, process_df, paths):
-    print("Writing matched ET-prior-style 3D temperature CSV...")
+    print("Writing optional legacy 3D temperature CSV...")
     volume = _compute_temperature_volume(
         process_df=process_df,
         domain=DEFAULT_DOMAIN,
@@ -331,7 +349,7 @@ def _generate_gr_map(args, paths):
 
     _require_files([paths["liquidus_csv"]], "gr-map", ["liquidus"])
     print("Generating GR map overlay...")
-    request_GR_Grid_from_excel(
+    *_, interfacial_energy = request_GR_Grid_from_excel(
         excel_path=args.excel_path,
         row_index=args.row_index,
         element_cols=args.element_cols,
@@ -339,6 +357,9 @@ def _generate_gr_map(args, paths):
         kinetic_database=args.kinetic_db,
         primary_phase=args.primary_phase,
         interfacial_energy=args.interfacial_energy,
+        nb_nucleations_site=args.cet_nucleation_sites,
+        nucleation_undercooling=args.cet_nucleation_undercooling_k,
+        equiaxed_exponent=args.cet_equiaxed_exponent,
         show_plot=False,
         disable_cache=args.disable_tc_cache,
         disable_output=True,
@@ -346,8 +367,11 @@ def _generate_gr_map(args, paths):
         overlay_csv=paths["liquidus_csv"],
         overlay_label="3D liquidus boundary",
         legend_loc=args.gr_legend_loc,
+        report_interfacial_energy=False,
+        return_interfacial_energy=True,
     )
     print(f"Wrote {paths['gr_map_png']}")
+    return interfacial_energy
 
 
 def _generate_gr_projection(paths):
@@ -374,10 +398,14 @@ def _generate_microstructure(args, paths):
             "kinetic_db": args.kinetic_db,
             "primary_phase": args.primary_phase,
             "interfacial_energy": args.interfacial_energy,
+            "nb_nucleations_site": args.cet_nucleation_sites,
+            "nucleation_undercooling": args.cet_nucleation_undercooling_k,
+            "equiaxed_exponent": args.cet_equiaxed_exponent,
             "composition_unit": CompositionUnit.MOLE_FRACTION,
+            "report_interfacial_energy": False,
         }
     }
-    plot_projected_liquidus(
+    _, _, projected = plot_projected_liquidus(
         liquidus_csv=paths["liquidus_csv"],
         output_path=paths["microstructure_png"],
         excel_path=args.excel_path,
@@ -386,6 +414,7 @@ def _generate_microstructure(args, paths):
         map_configs=projection_map_configs,
     )
     print(f"Wrote {paths['microstructure_png']}")
+    return projected.attrs["interfacial_energy_j_m2"]
 
 
 def run_workflow(args):
@@ -396,11 +425,12 @@ def run_workflow(args):
 
     output_dir.mkdir(parents=True, exist_ok=True)
     paths = _workflow_paths(output_dir, stem)
-    selected = set(args.steps or ALL_STEPS)
+    selected = set(args.steps or DEFAULT_STEPS)
     generated = {"output_dir": output_dir}
     metadata = None
+    interfacial_energy = None
 
-    for step in ALL_STEPS:
+    for step in STEP_ORDER:
         if step not in selected:
             continue
         print(f"Running ET workflow step: {step}")
@@ -419,15 +449,17 @@ def run_workflow(args):
             _generate_liquidus(args, paths, metadata)
             generated["liquidus_csv"] = paths["liquidus_csv"]
         elif step == "gr-map":
-            _generate_gr_map(args, paths)
+            interfacial_energy = _generate_gr_map(args, paths)
             generated["gr_map_png"] = paths["gr_map_png"]
         elif step == "gr-projection":
             _generate_gr_projection(paths)
             generated["gr_projection_png"] = paths["gr_projection_png"]
         elif step == "microstructure":
-            _generate_microstructure(args, paths)
+            interfacial_energy = _generate_microstructure(args, paths)
             generated["microstructure_png"] = paths["microstructure_png"]
 
+    if interfacial_energy is not None:
+        generated["interfacial_energy_j_m2"] = interfacial_energy
     return generated
 
 
@@ -438,22 +470,52 @@ def parse_args():
     parser.add_argument(
         "--steps",
         nargs="+",
-        choices=ALL_STEPS,
-        help="Run only the listed steps (default: all steps).",
+        choices=STEP_ORDER,
+        help=(
+            "Run only the listed steps. By default, run the complete "
+            "VTI-based workflow without the optional temperature-volume CSV."
+        ),
     )
     parser.add_argument("--excel", dest="excel_path", default=DEFAULT_EXCEL)
     parser.add_argument("--row-index", type=int, default=DEFAULT_ROW_INDEX, help="Zero-based pandas row index.")
     parser.add_argument("--element-cols", nargs="+", default=DEFAULT_ELEMENT_COLS)
     parser.add_argument("--calc-root", default=DEFAULT_CALC_ROOT)
     parser.add_argument("--output-dir", default=None)
-    parser.add_argument("--workers", type=int, default=12)
+    parser.add_argument("--workers", type=int, default=5)
     parser.add_argument("--chunk-size", type=int, default=50)
     parser.add_argument("--vti-resolution-um", type=float, default=1.0)
     parser.add_argument("--vti-padding-um", type=float, default=20.0)
     parser.add_argument("--thermo-db", default=DEFAULT_THERMO_DB)
     parser.add_argument("--kinetic-db", default=DEFAULT_KINETIC_DB)
     parser.add_argument("--primary-phase", default=DEFAULT_PRIMARY_PHASE)
-    parser.add_argument("--interfacial-energy", type=float, default=DEFAULT_INTERFACIAL_ENERGY)
+    parser.add_argument(
+        "--interfacial-energy",
+        type=float,
+        default=DEFAULT_INTERFACIAL_ENERGY_OVERRIDE,
+        help=(
+            "Explicit interfacial energy in J/m^2. Otherwise, use the "
+            "'Interfacial Energy (J/m^2)' spreadsheet value when present, "
+            "or estimate it with Thermo-Calc at liquidus - 1 K."
+        ),
+    )
+    parser.add_argument(
+        "--cet-nucleation-sites",
+        type=float,
+        default=DEFAULT_CET_NUCLEATION_SITES,
+        help="CET nucleation-site density in 1/m^3.",
+    )
+    parser.add_argument(
+        "--cet-nucleation-undercooling-k",
+        type=float,
+        default=DEFAULT_CET_NUCLEATION_UNDERCOOLING_K,
+        help="CET nucleation undercooling in K.",
+    )
+    parser.add_argument(
+        "--cet-equiaxed-exponent",
+        type=float,
+        default=DEFAULT_CET_EQUIAXED_EXPONENT,
+        help="Exponent used by the CET equiaxed-grain model.",
+    )
     parser.add_argument("--disable-tc-cache", action="store_true")
     parser.add_argument("--gr-legend-loc", default="upper left")
     return parser.parse_args()
@@ -463,4 +525,11 @@ if __name__ == "__main__":
     outputs = run_workflow(parse_args())
     print("ET workflow outputs:")
     for name, path in outputs.items():
+        if name == "interfacial_energy_j_m2":
+            continue
         print(f"  {name}: {path}")
+    if "interfacial_energy_j_m2" in outputs:
+        print(
+            "Interfacial energy used: "
+            f"{outputs['interfacial_energy_j_m2']:.6g} J/m^2"
+        )

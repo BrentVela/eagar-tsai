@@ -11,9 +11,14 @@ import pyvista as pv
 from matplotlib.patches import Patch
 from scipy.ndimage import distance_transform_edt, label
 
+try:
+    from .et_temperature_field import load_et_temperature_field
+except ImportError:
+    from et_temperature_field import load_et_temperature_field
 
-TEMPERATURE_CSV = Path(
-    "beamer/figures/250_0.5/ET_alloy0_250_0.5.csv"
+
+ET_TEMPERATURE_FIELD = Path(
+    "beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.vti"
 )
 TCAM_MESH = Path("beamer/figures/data/result.e")
 TCAM_TEMPERATURE_ARRAY = "temperature"
@@ -27,74 +32,54 @@ PLOT_Y_LIMIT_UM = 100.0
 PLOT_Z_MIN_UM = -115.0
 SAMPLE_GRID_NY = 241
 SAMPLE_GRID_NZ = 231
-KEYHOLE_COLOR = "#FFFFFF"  # Previous color: "#555555"
+KEYHOLE_COLOR = "#555555"
 MIN_KEYHOLE_WIDTH_CELLS = 3
 MIN_TCAM_CONTOUR_LENGTH_UM = 5.0
 
 
 def load_et_slices():
-    """Load all requested ET planes in one pass through the temperature CSV."""
-    requested = np.asarray(SLICE_X_UM)
-    parts = {x: [] for x in SLICE_X_UM}
-    global_temperature_min = np.inf
-    global_temperature_max = -np.inf
-    for chunk in pd.read_csv(
-        TEMPERATURE_CSV,
-        usecols=["x", "y", "z", "T_ET"],
-        chunksize=500_000,
-    ):
-        global_temperature_min = min(
-            global_temperature_min,
-            chunk["T_ET"].min(),
-        )
-        global_temperature_max = max(
-            global_temperature_max,
-            chunk["T_ET"].max(),
-        )
-        chunk_x = chunk["x"].to_numpy()
-        for x in SLICE_X_UM:
-            selected = np.isclose(chunk_x, x, atol=1.0e-6)
-            if selected.any():
-                parts[x].append(chunk.loc[selected, ["y", "z", "T_ET"]])
-
+    """Load all requested ET planes from one structured temperature field."""
+    field = load_et_temperature_field(ET_TEMPERATURE_FIELD)
     slices = {}
     for x in SLICE_X_UM:
-        if not parts[x]:
-            raise ValueError(
-                f"No ET data were found at x = {x:g} um. "
-                f"Requested locations: {requested.tolist()}"
+        # SLICE_X_UM is distance behind the laser. The trailing direction is
+        # opposite the field's recorded scan direction.
+        field_x = -field.scan_direction_x_sign * x
+        actual_x, yy, zz, temperature = field.yz_slice(
+            field_x,
+            y_limits_um=(0.0, PLOT_Y_LIMIT_UM),
+            z_limits_um=(PLOT_Z_MIN_UM, 0.0),
+        )
+        if not np.isclose(actual_x, field_x):
+            print(
+                f"Using nearest ET plane x={actual_x:g} um for requested "
+                f"trailing distance {x:g} um."
             )
-        points = pd.concat(parts[x], ignore_index=True)
-        points = points.loc[
-            (points["y"] >= 0.0)
-            & (points["y"] <= PLOT_Y_LIMIT_UM)
-            & (points["z"] >= PLOT_Z_MIN_UM)
-            & (points["z"] <= 0.0)
-        ]
-        plane = points.pivot(
-            index="z",
-            columns="y",
-            values="T_ET",
-        ).sort_index().sort_index(axis=1)
-        y = plane.columns.to_numpy()
-        z = plane.index.to_numpy()
-        yy, zz = np.meshgrid(y, z)
-        slices[x] = (yy, zz, plane.to_numpy())
-    return slices, global_temperature_min, global_temperature_max
+        slices[x] = (yy, zz, temperature)
+    return slices, field.temperature_min, field.temperature_max
 
 
 def load_tcam_source():
     """Read the connected TCAM element mesh and expose point temperature."""
     root = pv.read(TCAM_MESH)
     if isinstance(root, pv.MultiBlock):
-        if "Element Blocks" not in root.keys():
-            raise ValueError(
-                f"Could not find 'Element Blocks' in {TCAM_MESH}. "
-                f"Available blocks: {list(root.keys())}"
-            )
-        source = root["Element Blocks"].combine()
+        if "Element Blocks" in root.keys():
+            # Exodus-II result.e exported by the TCAM GUI.
+            source = root["Element Blocks"].combine()
+        else:
+            # Native TC-Python result.pvd, normally containing Block-00.
+            source = root.combine()
     else:
         source = root
+
+    # Match TC-Python's AdditiveManufacturingResult.get_pyvista_mesh()
+    # filtering when reading the native PVD bundle directly.
+    if "subdomain_id" in source.array_names:
+        source = source.threshold(
+            value=3,
+            scalars="subdomain_id",
+            invert=True,
+        )
 
     if TCAM_TEMPERATURE_ARRAY not in source.point_data:
         if TCAM_TEMPERATURE_ARRAY in source.cell_data:
@@ -219,7 +204,10 @@ def output_path_for_slices(slice_x_um):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Stack ET/TCAM YZ comparisons at requested x locations."
+        description=(
+            "Stack ET/TCAM YZ comparisons at requested distances behind "
+            "the laser."
+        )
     )
     parser.add_argument(
         "--slices",
@@ -227,7 +215,10 @@ def parse_args():
         type=float,
         default=SLICE_X_UM,
         metavar="X_UM",
-        help="Slice locations in micrometers (default: 0 40 80 120 160).",
+        help=(
+            "Distances behind the laser in micrometers "
+            "(default: 0 80 160)."
+        ),
     )
     parser.add_argument(
         "--output",

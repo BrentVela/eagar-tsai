@@ -1,0 +1,26 @@
+{
+  "ssType": "Single",
+  "amType": "STEADY",
+  "hsType": "GAUSSIAN",
+  "separateMaterial": false,
+  "percentagePowderDensity": 0.8,
+  "beamRadius": [
+    3.9999999999999996e-05,
+    3.9999999999999996e-05
+  ],
+  "effectiveBeamRadius": 3.9999999999999996e-05,
+  "power": 150.0,
+  "ringPowerPercent": 0.0,
+  "speed": 1500.0,
+  "absorptivity": 0.361979307571839,
+  "layerThickness": 30.0,
+  "liquidusTemperature": 3454.846,
+  "solidusTemperature": 2637.841,
+  "evaporateTemperature": 5792.901462015859,
+  "mainFileName": "result.vtu",
+  "number": -1,
+  "expWidth": NaN,
+  "expDepth": NaN,
+  "nativeMainFileName": "result.pvd",
+  "archiveFormat": "consolidated-vtu"
+}

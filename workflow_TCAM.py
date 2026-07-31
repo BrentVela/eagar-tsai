@@ -13,21 +13,25 @@ from pathlib import Path
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 
+from microstructure.GR_Map import DEFAULT_PRIMARY_PHASE
+
 REPO_ROOT = Path(__file__).resolve().parent
 DEFAULT_EXCEL = REPO_ROOT / "effective_cp_data.xlsx"
 DEFAULT_ROW_INDEX = 2  # Zero-based pandas row index (Excel row 4).
-DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V"]
-DEFAULT_TCAM_GR_CSV = (REPO_ROOT / "beamer/figures/data/TCAM_GR_alloy0_250_0.5.csv")
+DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V", "Co", "Cr", "Fe", "Mn", "Ni"]
+DEFAULT_TCAM_GR_CSV = (REPO_ROOT / "beamer/figures/data/BU_TCAM/alloy0_P250_V0p5_row2/TCAM_GR_alloy0_250_0.5.csv")
 DEFAULT_ET_GR_CSV = (REPO_ROOT / "beamer/figures/250_0.5/liquidus_GR_alloy0_250_0.5.csv")
-DEFAULT_ET_TEMPERATURE_CSV = (REPO_ROOT / "beamer/figures/250_0.5/ET_alloy0_250_0.5.csv")
+DEFAULT_ET_TEMPERATURE_FIELD = (
+    REPO_ROOT
+    / "beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.vti"
+)
 DEFAULT_ET_METADATA_CSV = (REPO_ROOT / "beamer/figures/250_0.5/ET_meta_alloy0_250_0.5.csv")
-DEFAULT_TCAM_MESH = REPO_ROOT / "beamer/figures/data/result.e"
-DEFAULT_OUTPUT_DIR = REPO_ROOT / "beamer/figures/TCAM"
+DEFAULT_TCAM_MESH = REPO_ROOT / "beamer/figures/data/BU_TCAM/alloy0_P250_V0p5_row2/result.pvd"
+DEFAULT_OUTPUT_DIR = REPO_ROOT / "beamer/figures/TCAM/solver_test"
 
 DEFAULT_THERMO_DB = "TCHEA8"
 DEFAULT_KINETIC_DB = "MOBHEA3"
-DEFAULT_PRIMARY_PHASE = "BCC_B2"
-DEFAULT_INTERFACIAL_ENERGY = 0.5
+DEFAULT_INTERFACIAL_ENERGY_OVERRIDE = None
 
 ALL_STEPS = (
     "base-map",
@@ -128,7 +132,7 @@ def _generate_temperature_comparison(args):
     # Set them here so this workflow's command-line paths remain authoritative.
     from Bayesian import PlotTempYZStack
 
-    PlotTempYZStack.TEMPERATURE_CSV = args.et_temperature_csv
+    PlotTempYZStack.ET_TEMPERATURE_FIELD = args.et_temperature_field
     PlotTempYZStack.TCAM_MESH = args.tcam_mesh
     PlotTempYZStack.METADATA_CSV = args.et_metadata_csv
     PlotTempYZStack.OUTPUT_DIR = args.output_dir
@@ -151,7 +155,7 @@ def run_workflow(args):
         _require_files([args.et_gr_csv])
     if "temperature" in selected:
         _require_files(
-            [args.et_temperature_csv, args.et_metadata_csv, args.tcam_mesh]
+            [args.et_temperature_field, args.et_metadata_csv, args.tcam_mesh]
         )
 
     generators = {
@@ -187,19 +191,40 @@ def parse_args():
     parser.add_argument("--tcam-gr-csv", type=Path, default=DEFAULT_TCAM_GR_CSV)
     parser.add_argument("--et-gr-csv", type=Path, default=DEFAULT_ET_GR_CSV)
     parser.add_argument(
-        "--et-temperature-csv", type=Path, default=DEFAULT_ET_TEMPERATURE_CSV
+        "--et-temperature-field",
+        "--et-temperature-csv",
+        dest="et_temperature_field",
+        type=Path,
+        default=DEFAULT_ET_TEMPERATURE_FIELD,
+        help=(
+            "ET temperature .vti field. Legacy x/y/z/T_ET CSV files are "
+            "also accepted; --et-temperature-csv remains as an alias."
+        ),
     )
     parser.add_argument(
         "--et-metadata-csv", type=Path, default=DEFAULT_ET_METADATA_CSV
     )
     parser.add_argument("--tcam-mesh", type=Path, default=DEFAULT_TCAM_MESH)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    parser.add_argument("--slices", nargs="+", type=float, default=[0.0, 80.0, 160.0])
+    parser.add_argument(
+        "--slices",
+        nargs="+",
+        type=float,
+        default=[0.0, 80.0, 160.0],
+        help="YZ-slice distances behind the laser in micrometers.",
+    )
     parser.add_argument("--thermo-db", default=DEFAULT_THERMO_DB)
     parser.add_argument("--kinetic-db", default=DEFAULT_KINETIC_DB)
     parser.add_argument("--primary-phase", default=DEFAULT_PRIMARY_PHASE)
     parser.add_argument(
-        "--interfacial-energy", type=float, default=DEFAULT_INTERFACIAL_ENERGY
+        "--interfacial-energy",
+        type=float,
+        default=DEFAULT_INTERFACIAL_ENERGY_OVERRIDE,
+        help=(
+            "Explicit interfacial energy in J/m^2. Otherwise, use the "
+            "'Interfacial Energy (J/m^2)' spreadsheet value when present, "
+            "or estimate it with Thermo-Calc at liquidus - 1 K."
+        ),
     )
     parser.add_argument("--disable-tc-cache", action="store_true")
     return parser.parse_args()

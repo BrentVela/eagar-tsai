@@ -10,8 +10,15 @@ from matplotlib.patches import Patch, Rectangle
 from scipy.interpolate import griddata
 from scipy.ndimage import distance_transform_edt, label
 
+try:
+    from .et_temperature_field import load_et_temperature_field
+except ImportError:
+    from et_temperature_field import load_et_temperature_field
 
-TEMPERATURE_CSV = Path("beamer/figures/250_0.5/ET_alloy0_250_0.5.csv")
+
+ET_TEMPERATURE_FIELD = Path(
+    "beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.vti"
+)
 PARAVIEW_CSV = Path("beamer/figures/data/better_plane_resample.csv") # only need if USE_TCAM_MESH = False
 TCAM_MESH = Path("beamer/figures/data/result.e")
 TCAM_TEMPERATURE_ARRAY = "temperature"
@@ -34,26 +41,18 @@ MIN_TCAM_CONTOUR_LENGTH_UM = 5.0
 
 
 def load_laser_center_slice():
-    parts = []
-    for chunk in pd.read_csv(
-        TEMPERATURE_CSV,
-        usecols=["x", "y", "z", "T_ET"],
-        chunksize=500_000,
-    ):
-        on_slice = np.isclose(chunk["x"], ET_X_UM, atol=1.0e-6)
-        parts.append(chunk.loc[on_slice, ["y", "z", "T_ET"]])
-
-    plane = pd.concat(parts, ignore_index=True)
-    temperature = plane.pivot(
-        index="z",
-        columns="y",
-        values="T_ET",
-    ).sort_index()
-    y = temperature.columns.to_numpy()
-    z = temperature.index.to_numpy()
-    values = temperature.to_numpy()
-
-    return y, z, values
+    field = load_et_temperature_field(ET_TEMPERATURE_FIELD)
+    actual_x, yy, zz, temperature = field.yz_slice(
+        ET_X_UM,
+        y_limits_um=(0.0, PLOT_Y_LIMIT_UM),
+        z_limits_um=(PLOT_Z_MIN_UM, 0.0),
+    )
+    if not np.isclose(actual_x, ET_X_UM):
+        print(
+            f"Using nearest ET plane x={actual_x:g} um for requested "
+            f"x={ET_X_UM:g} um."
+        )
+    return yy[0, :], zz[:, 0], temperature
 
 
 def load_paraview_slice():
@@ -103,14 +102,23 @@ def load_tcam_mesh_slice():
 
     root = pv.read(TCAM_MESH)
     if isinstance(root, pv.MultiBlock):
-        if "Element Blocks" not in root.keys():
-            raise ValueError(
-                f"Could not find 'Element Blocks' in {TCAM_MESH}. "
-                f"Available blocks: {list(root.keys())}"
-            )
-        source = root["Element Blocks"].combine()
+        if "Element Blocks" in root.keys():
+            # Exodus-II result.e exported by the TCAM GUI.
+            source = root["Element Blocks"].combine()
+        else:
+            # Native TC-Python result.pvd, normally containing Block-00.
+            source = root.combine()
     else:
         source = root
+
+    # Match TC-Python's AdditiveManufacturingResult.get_pyvista_mesh()
+    # filtering when reading the native PVD bundle directly.
+    if "subdomain_id" in source.array_names:
+        source = source.threshold(
+            value=3,
+            scalars="subdomain_id",
+            invert=True,
+        )
 
     if TCAM_TEMPERATURE_ARRAY not in source.point_data:
         if TCAM_TEMPERATURE_ARRAY in source.cell_data:

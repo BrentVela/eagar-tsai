@@ -145,7 +145,7 @@
         \begin{minipage}[t][0.43\textheight][t]{\linewidth}
         \begin{minipage}[c][0.19\textheight][c]{\linewidth}
           \centering
-          \includegraphics[width=\linewidth,height=0.18\textheight,keepaspectratio]{figures/paraview_corrected.png}
+          \includegraphics[width=\linewidth,height=0.17\textheight,keepaspectratio]{figures/paraview_corrected.png}
         \end{minipage}
 
         \vspace{0.35em}
@@ -256,18 +256,20 @@
   \vspace{-0.35em}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.52\textwidth}
+      {
+      \setbeamerfont{block title}{size=\fontsize{22}{26}\selectfont,series=\bfseries}
+      \setbeamerfont{block body}{size=\fontsize{21}{25}\selectfont}
+      \setbeamerfont{itemize/enumerate body}{size=\fontsize{21}{25}\selectfont}
       \begin{block}{Kurz--Giovanola--Trivedi framework}
+        \vspace{0.4em}
         \begin{itemize}
           \item KGT links dendrite-tip operating state to local thermal gradient, $G$, and interface growth rate, $R$.
           \item The dendrite tip is approximated locally as a paraboloid with radius of curvature $\rho$.
           \item Tip selection then relates $\rho$ to $R$ and alloy transport and capillarity properties.
         \end{itemize}
+        \vspace{0.025\textheight}
       \end{block}
-
-      \vspace{0.25em}
-      \begin{alertblock}{Why it matters here}
-        ET supplies local $G$ and $R$ along the solidification front. KGT uses those fields, together with material properties, to connect melt-pool conditions to dendrite-tip size and morphology selection.
-      \end{alertblock}
+      }
 
       \vspace{0.1em}
       \centering
@@ -284,25 +286,24 @@
       Pe = \frac{\rho R}{2D_l}
       \]
       \[
-      \sigma^* = \frac{2D_l d_0}{\rho^2 R}
+      \xi_c =
+      1-\frac{2k}
+      {\left[1+\left(2\pi/Pe\right)^2\right]^{1/2}-1+2k}
       \]
       \[
-      \rho = \left(\frac{2D_l d_0}{\sigma^* R}\right)^{1/2}
-      \]
-      \[
-      d_0 \approx \frac{\Gamma}{|m|\,C_0(1-k)/k}
+      \rho =
+      2\pi\left(\frac{\Gamma}{mG_c\xi_c-G}\right)^{1/2}
       \]
       }
 
-      \vspace{0.35em}
+      \vspace{0.25em}
+      {
+      \setbeamerfont{itemize/enumerate body}{size=\fontsize{18}{22}\selectfont}
       \begin{itemize}
-        \item $D_l$: liquid diffusivity, $\Gamma$: Gibbs--Thomson coefficient, $m$: liquidus slope.
-        \item $C_0$: nominal composition, $k$: partition coefficient, $\sigma^*$: tip-selection parameter.
-        \item Higher $R$ gives a smaller selected tip radius $\rho$ for fixed material properties.
+        \item $x,y$: transverse tip coordinates; $z$: growth-axis coordinate; $Pe$: solutal Péclet number; $D_l$: liquid diffusivity; $k$: partition coefficient; $\xi_c$: marginal-stability function; $\Gamma$: Gibbs--Thomson coefficient; $m$: liquidus slope; $G_c$: liquid concentration gradient at the interface.
+        \item The coupled relations determine the selected tip radius $\rho$ from local $G$, $R$, and alloy properties.
       \end{itemize}
-
-      \vspace{0.2em}
-      {\fontsize{13}{16}\selectfont\textcolor{neutralmid}{In this workflow, $G$ determines the imposed thermal field and morphology stability, while $R$ enters directly into the selected paraboloid tip radius.}\par}
+      }
     \end{column}
   \end{columns}
 \end{frame}

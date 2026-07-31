@@ -5,12 +5,12 @@ This is the presentation for SFF Symposium 2026 by Kyle Swartz titled, "Rapid Mi
 ## Figures
 ### ET-Related Figures
 
-`workflow_ET.py` regenerates the five ET figures used by the presentation and the intermediate data consumed by the TCAM comparison. By default it runs the complete ET-to-microstructure pipeline for Alloy 0 (Hf<sub>2</sub>Mo<sub>2</sub>Ta<sub>48</sub>W<sub>48</sub>) at P = 250 W and V = 0.5 m/s:
+`workflow_ET.py` regenerates the five ET figures used by the presentation and the intermediate data consumed by the TCAM comparison. By default it runs the VTI-based ET-to-microstructure pipeline for Alloy 0 (Hf<sub>2</sub>Mo<sub>2</sub>Ta<sub>48</sub>W<sub>48</sub>) at P = 250 W and V = 0.5 m/s. The large 3D temperature CSV is no longer part of the default run:
 
 ```python
 DEFAULT_EXCEL = "effective_cp_data.xlsx"
 DEFAULT_ROW_INDEX = 2
-DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V"]
+DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V", "Co", "Cr", "Fe", "Mn", "Ni"]
 DEFAULT_CALC_ROOT = "beamer/figures"
 ```
 
@@ -46,7 +46,7 @@ Selected steps run in pipeline order and reuse prerequisite files already in the
 | Step | Output | Existing prerequisite when run alone |
 | --- | --- | --- |
 | `temperature-field` | `temperature_field_*.png`, `ET_meta_*.csv` | None |
-| `temperature-volume` | `ET_*.csv` | None |
+| `temperature-volume` (optional) | Legacy `ET_*.csv` | None |
 | `temperature-3d` | `ET_3D_temperature_*.png`, `ET_3D_temperature_*.vti` | `ET_meta_*.csv` |
 | `liquidus` | `liquidus_GR_*.csv` | `ET_meta_*.csv`, `ET_3D_temperature_*.vti` |
 | `gr-map` | `GR_map_overlayET_*.png` | `liquidus_GR_*.csv` |
@@ -54,6 +54,67 @@ Selected steps run in pipeline order and reuse prerequisite files already in the
 | `microstructure` | `projected_microstructure_*.png` | `liquidus_GR_*.csv` |
 
 The `gr-map` and `microstructure` steps require a working Thermo-Calc/TC-Python installation and license. Run `python workflow_ET.py --help` for process, resolution, database, and output-directory overrides.
+
+The `ET_3D_temperature_*.vti` file is the canonical 3D ET temperature field.
+It is consumed directly by the G/R extraction, GPR interpolation, and YZ
+temperature plotting code. Use `--steps temperature-volume` only when a
+legacy or external tool specifically requires an `x,y,z,T_ET` CSV.
+
+`Bayesian/ET_prior.py` follows the same convention for batch cases: every
+case writes `ET_temperature.vti`, `metadata.csv`, and (unless disabled) an
+inferno heatmap. Add `--export-csv` only when a tabular copy is needed. The
+parent `ET_Alloy#_4x4.csv` remains a compact manifest across the selected
+Excel rows (for example, `ET_Alloy0_4x4.csv`).
+ET-prior VTI, CSV, and heatmap outputs use positive x as the laser scanning
+direction, matching the raw TCAM coordinate frame in ParaView.
+
+### Multi-case Bayesian update
+
+`Bayesian/GPR_multi.py` trains the ET-to-TCAM residual model on complete P-V
+cases and evaluates one P-V case that was excluded from fitting. Its default
+experiment uses all 15 remaining P-V conditions and holds out
+`250 W, 0.5 m/s`:
+
+```bash
+python Bayesian/GPR_multi.py
+```
+
+The held-out TCAM VTU is not opened until after GPR fitting. It is then used
+only to calculate whole-case test metrics and parity plots. To choose a
+different split, repeat `--training-case` exactly once per training condition:
+
+```bash
+python Bayesian/GPR_multi.py \
+  --held-out-case 350,1 \
+  --training-case 50,0.1 \
+  --training-case 50,1.5 \
+  --training-case 150,0.5 \
+  --training-case 150,1 \
+  --training-case 250,0.1 \
+  --training-case 250,1.5 \
+  --training-case 350,0.5 \
+  --training-case 350,1.5
+```
+
+Each case contributes the same maximum number of sampled points. A dedicated
+fraction is reserved for evaporation-plateau points when they exist. Final
+temperature predictions retain the unconstrained GPR result and a
+physics-constrained result bounded by the 298 K ambient temperature and the
+independently supplied `Boiling Onset (K)` value.
+
+The CET model inputs can be overridden from the command line. Their workflow
+defaults are a primary phase of `FCC_L12`, interfacial energy of `0.5 J/m2`,
+nucleation-site density of `4.0e11 1/m3`, nucleation undercooling of `4.0 K`,
+and equiaxed exponent of `3.13`:
+
+```bash
+python workflow_ET.py --steps gr-map microstructure \
+  --primary-phase FCC_L12 \
+  --interfacial-energy 0.5 \
+  --cet-nucleation-sites 4.0e11 \
+  --cet-nucleation-undercooling-k 4.0 \
+  --cet-equiaxed-exponent 3.13
+```
 
 **`figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.png`**
 
@@ -86,24 +147,24 @@ The `gr-map` and `microstructure` steps require a working Thermo-Calc/TC-Python 
 ```python
 DEFAULT_EXCEL = "effective_cp_data.xlsx"
 DEFAULT_ROW_INDEX = 2
-DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V"]
+DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V", "Co", "Cr", "Fe", "Mn", "Ni"]
 DEFAULT_THERMO_DB = "TCHEA8"
 DEFAULT_KINETIC_DB = "MOBHEA3"
 DEFAULT_PRIMARY_PHASE = "BCC_B2"
 DEFAULT_INTERFACIAL_ENERGY = 0.5
 DEFAULT_TCAM_GR_CSV = (REPO_ROOT / "beamer/figures/data/TCAM_GR_alloy0_250_0.5.csv")
 DEFAULT_ET_GR_CSV = (REPO_ROOT / "beamer/figures/250_0.5/liquidus_GR_alloy0_250_0.5.csv")
-DEFAULT_ET_TEMPERATURE_CSV = (REPO_ROOT / "beamer/figures/250_0.5/ET_alloy0_250_0.5.csv")
+DEFAULT_ET_TEMPERATURE_FIELD = (REPO_ROOT / "beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.vti")
 DEFAULT_ET_METADATA_CSV = (REPO_ROOT / "beamer/figures/250_0.5/ET_meta_alloy0_250_0.5.csv")
-DEFAULT_TCAM_MESH = REPO_ROOT / "beamer/figures/data/result.e"
+DEFAULT_TCAM_MESH = REPO_ROOT / "beamer/figures/data/BU_TCAM/alloy0_P250_V0p5_row2/result.pvd"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "beamer/figures/TCAM"
 ```
 
 The workflow expects these exported inputs:
 
 - `figures/data/TCAM_GR_alloy0_250_0.5.csv`: TCAM liquidus points exported through ParaView, including `Points_0`, `Points_1`, `Points_2`, `Gradient_Magnitude`, and `R (m/s)`.
-- `figures/data/result.e`: the connected TCAM mesh containing the `temperature` array.
-- `figures/250_0.5/liquidus_GR_alloy0_250_0.5.csv`, `ET_alloy0_250_0.5.csv`, and `ET_meta_alloy0_250_0.5.csv`: ET outputs created by `workflow_ET.py`.
+- `figures/data/BU_TCAM/alloy0_P250_V0p5_row2/result.pvd`: the connected native TCAM mesh containing the `temperature` array. A GUI-exported `result.e` is also supported.
+- `figures/250_0.5/liquidus_GR_alloy0_250_0.5.csv`, `ET_3D_temperature_alloy0_250_0.5.vti`, and `ET_meta_alloy0_250_0.5.csv`: ET outputs created by `workflow_ET.py`.
 
 Run all TCAM figure steps from the repository root:
 
