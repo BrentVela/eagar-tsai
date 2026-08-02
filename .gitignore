@@ -17,3 +17,4 @@ TC_Python/
 .tools/downloads/
 beamer/figures/250_0.5
 beamer/figures/TCAM
+*.joblib

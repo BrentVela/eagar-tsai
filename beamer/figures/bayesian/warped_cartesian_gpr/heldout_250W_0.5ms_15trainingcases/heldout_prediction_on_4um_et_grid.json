@@ -1,0 +1,41 @@
+{
+  "mode": "saved-model TCAM-blind prediction only",
+  "model_bundle": "beamer/figures/bayesian/warped_cartesian_gpr/heldout_250W_0.5ms_15trainingcases/warped_cartesian_residual_gpr.joblib",
+  "case_id": "alloy0_250W_0.5ms",
+  "source_et_field": "/home/kyleswartz/projects/ETtoKGT/beamer/figures/data/BU_ET/0_250W_0.5ms/ET_temperature.vti",
+  "prediction_vti": "beamer/figures/bayesian/warped_cartesian_gpr/heldout_250W_0.5ms_15trainingcases/heldout_prediction_on_4um_et_grid.vti",
+  "feature_columns": [
+    "P",
+    "V",
+    "x",
+    "y",
+    "z",
+    "T_warped_ET"
+  ],
+  "predicted_warp": {
+    "amplitude": 0.7455711091223048,
+    "rear_scale": 0.9746879331269731,
+    "front_scale": 0.7269659773867491,
+    "width_scale": 0.8565903741266478,
+    "depth_scale": 2.871546597290053,
+    "x_shift_over_sigma": 0.047594448759024216
+  },
+  "output_dimensions": [
+    181,
+    51,
+    64
+  ],
+  "output_point_count": 590784,
+  "output_spacing_um": [
+    4.0,
+    4.0,
+    3.9682539682539755
+  ],
+  "prediction_grid_stride": 2,
+  "bounded_prediction_counts_on_output_grid": {
+    "ambient_lower_bound": 21282,
+    "evaporation_upper_bound": 1223
+  },
+  "TCAM_information_used": false,
+  "runtime_seconds": 213.13204225699883
+}
