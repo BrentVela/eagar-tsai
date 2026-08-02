@@ -1,0 +1,22 @@
+{
+  "source_et_field": "/home/kyleswartz/projects/ETtoKGT/beamer/figures/data/BU_ET/0_250W_0.5ms/ET_temperature.vti",
+  "prediction_vti": "/home/kyleswartz/projects/ETtoKGT/beamer/figures/bayesian/warped_cartesian_r3d_matern52_rear_tip30_gpr/heldout_250W_0.5ms_15trainingcases/heldout_prediction_on_coarse_et_grid.vti",
+  "comparison_vti_created_after_prediction_freeze": "/home/kyleswartz/projects/ETtoKGT/beamer/figures/bayesian/warped_cartesian_r3d_matern52_rear_tip30_gpr/heldout_250W_0.5ms_15trainingcases/heldout_prediction_vs_tcam_on_coarse_et_grid.vti",
+  "output_dimensions": [
+    91,
+    26,
+    33
+  ],
+  "output_point_count": 78078,
+  "output_spacing_um": [
+    8.0,
+    8.0,
+    7.8125
+  ],
+  "comparison_tcam_valid_point_count": 78064,
+  "bounded_prediction_counts_on_output_grid": {
+    "ambient_lower_bound": 6974,
+    "evaporation_upper_bound": 182
+  },
+  "TCAM_information_used_for_prediction": false
+}

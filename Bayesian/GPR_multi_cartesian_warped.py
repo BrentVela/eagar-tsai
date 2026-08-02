@@ -32,6 +32,7 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import LinearNDInterpolator
 from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import ConstantKernel, Matern, WhiteKernel
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import make_pipeline
@@ -142,6 +143,9 @@ FEATURE_COLUMNS = BASE_FEATURE_COLUMNS
 POINTS_PER_TRAINING_CASE = 500
 N_RESTARTS_OPTIMIZER = 1
 WARP_SURFACE_RIDGE_ALPHA = 2.0e-2
+KERNEL_CHOICES = ("rbf", "matern52")
+REAR_LIQUIDUS_BAND_K = 300.0
+REAR_LIQUIDUS_TIP_WINDOW_UM = 25.0
 
 
 def feature_columns_for(radial_feature: str) -> list[str]:
@@ -168,6 +172,180 @@ def add_requested_radial_feature(
         coordinates = result[["x", "y", "z"]].to_numpy(dtype=float)
         result["r_3d"] = np.linalg.norm(coordinates, axis=1)
     return result
+
+
+def sample_warped_training_case(
+    dataframe: pd.DataFrame,
+    points_per_case: int,
+    seed: int,
+    rear_liquidus_points: int,
+    rear_liquidus_band_k: float = REAR_LIQUIDUS_BAND_K,
+) -> pd.DataFrame:
+    """Reserve part of a case's fixed sample budget for its rear melt-pool tip."""
+    if rear_liquidus_points < 0:
+        raise ValueError("rear_liquidus_points cannot be negative.")
+    if rear_liquidus_band_k <= 0.0:
+        raise ValueError("rear_liquidus_band_k must be positive.")
+    if rear_liquidus_points == 0:
+        sampled = sample_training_case(dataframe, points_per_case, seed)
+        sampled["rear_liquidus_sample"] = False
+        return sampled
+
+    required = {"x", "T_TCAM", "T_warped_ET", "Tliq"}
+    missing = required - set(dataframe.columns)
+    if missing:
+        raise ValueError(
+            f"Rear-liquidus sampling requires missing columns: {sorted(missing)}"
+        )
+
+    row_id_column = "_rear_liquidus_row_id"
+    working = dataframe.copy()
+    working[row_id_column] = np.arange(len(working), dtype=np.int64)
+    liquidus_k = float(working["Tliq"].iloc[0])
+    truth = working["T_TCAM"].to_numpy(dtype=float)
+    warped = working["T_warped_ET"].to_numpy(dtype=float)
+    x_coordinate = working["x"].to_numpy(dtype=float)
+    rear = x_coordinate < 0.0
+    distance = np.abs(truth - liquidus_k)
+    near_liquidus = distance <= rear_liquidus_band_k
+    warped_false_negative = (truth >= liquidus_k) & (warped < liquidus_k)
+    molten_truth = truth >= liquidus_k
+    if molten_truth.any():
+        rear_tip_x = float(np.min(x_coordinate[molten_truth]))
+        rear_tip_window = (
+            x_coordinate <= rear_tip_x + REAR_LIQUIDUS_TIP_WINDOW_UM
+        )
+    else:
+        rear_tip_window = np.zeros(len(working), dtype=bool)
+    candidate_mask = (
+        rear & rear_tip_window & (near_liquidus | warped_false_negative)
+    )
+    candidates = working.loc[candidate_mask].copy()
+
+    dedicated_budget = min(
+        rear_liquidus_points,
+        points_per_case,
+        len(candidates),
+    )
+    if dedicated_budget:
+        candidate_distance = np.abs(
+            candidates["T_TCAM"].to_numpy(dtype=float) - liquidus_k
+        )
+        candidate_false_negative = (
+            (candidates["T_TCAM"].to_numpy(dtype=float) >= liquidus_k)
+            & (candidates["T_warped_ET"].to_numpy(dtype=float) < liquidus_k)
+        )
+        weights = np.exp(-candidate_distance / rear_liquidus_band_k)
+        weights *= np.where(candidate_false_negative, 3.0, 1.0)
+        # Extremely hot false negatives can be many exponential scales away
+        # from liquidus. Keep their priority negligible but nonzero so pandas
+        # can still draw the requested number without replacement when the
+        # near-liquidus subset is smaller than the dedicated budget.
+        weights = np.maximum(weights, 1.0e-12)
+        # Gumbel top-k performs weighted sampling without replacement in log
+        # space and remains stable across the very large thermal weight range.
+        rng = np.random.default_rng(seed)
+        selection_key = np.log(weights) + rng.gumbel(size=len(weights))
+        selected_positions = np.argpartition(
+            selection_key,
+            -dedicated_budget,
+        )[-dedicated_budget:]
+        dedicated = candidates.iloc[selected_positions].copy()
+    else:
+        dedicated = candidates.iloc[0:0].copy()
+    dedicated["rear_liquidus_sample"] = True
+
+    remaining_budget = points_per_case - len(dedicated)
+    remaining_pool = working.drop(index=dedicated.index)
+    # The inherited sampler rounds five overlapping stratum fractions. For
+    # some small or reduced budgets, those rounded targets can sum to one more
+    # than requested and trigger its budget assertion. Back off only as much
+    # as required, then fill the exact remainder from unused rows.
+    general_target = remaining_budget
+    while True:
+        try:
+            general = sample_training_case(
+                remaining_pool,
+                points_per_case=general_target,
+                seed=seed,
+            )
+            break
+        except AssertionError:
+            general_target -= 1
+            if general_target < 1:
+                raise
+    fill_count = remaining_budget - len(general)
+    if fill_count:
+        used_ids = set(general[row_id_column].to_numpy(dtype=np.int64))
+        leftover = remaining_pool[
+            ~remaining_pool[row_id_column].isin(used_ids)
+        ]
+        extra = leftover.sample(
+            n=min(fill_count, len(leftover)),
+            random_state=seed + 104729,
+        )
+        general = pd.concat([general, extra], ignore_index=True)
+    general["rear_liquidus_sample"] = False
+    sampled = pd.concat([dedicated, general], ignore_index=True)
+    if len(sampled) != points_per_case:
+        raise AssertionError(
+            "Rear-liquidus sampler did not preserve its exact point budget."
+        )
+    sampled = sampled.drop(columns=[row_id_column])
+    return sampled.sample(frac=1.0, random_state=seed).reset_index(drop=True)
+
+
+def make_residual_kernel(n_features: int, kernel_name: str):
+    """Build a controlled anisotropic residual-GP kernel."""
+    if kernel_name == "rbf":
+        return make_kernel(n_features)
+    if kernel_name == "matern52":
+        return (
+            ConstantKernel(1.0, (1.0e-3, 1.0e3))
+            * Matern(
+                length_scale=np.ones(n_features),
+                length_scale_bounds=(0.05, 1.0e3),
+                nu=2.5,
+            )
+            + WhiteKernel(
+                noise_level=1.0,
+                noise_level_bounds=(1.0e-6, 1.0e3),
+            )
+        )
+    raise ValueError(f"Unknown residual kernel: {kernel_name!r}")
+
+
+def default_output_dir(
+    radial_feature: str,
+    kernel_name: str,
+    rear_liquidus_points: int = 0,
+) -> Path:
+    """Keep every controlled feature/kernel ablation in its own directory."""
+    if kernel_name == "rbf":
+        output = {
+            "none": OUTPUT_DIR,
+            "r_yz": RYZ_OUTPUT_DIR,
+            "r_3d": R3D_OUTPUT_DIR,
+        }[radial_feature]
+    else:
+        radial_label = {
+            "none": "",
+            "r_yz": "_ryz",
+            "r_3d": "_r3d",
+        }[radial_feature]
+        output = (
+            REPO_ROOT
+            / f"beamer/figures/bayesian/warped_cartesian{radial_label}_{kernel_name}_gpr"
+            / "heldout_250W_0.5ms_15trainingcases"
+        )
+    if rear_liquidus_points <= 0:
+        return output
+    experiment_name = output.parent.name.removesuffix("_gpr")
+    return (
+        output.parent.parent
+        / f"{experiment_name}_rear_tip{rear_liquidus_points}_gpr"
+        / output.name
+    )
 
 
 class CartesianWarpParameterSurface:
@@ -275,6 +453,7 @@ def build_warped_training_table(
     warp_max_iterations: int,
     seed: int,
     feature_columns: list[str],
+    rear_liquidus_points_per_case: int,
 ):
     """Fit each training warp and sample Cartesian residual-GP observations."""
     sampled_cases = []
@@ -319,10 +498,11 @@ def build_warped_training_table(
         )
         # The inherited sampler uses this generic name for discrepancy strata.
         dataframe["delta_T"] = dataframe["delta_T_warped"]
-        sampled = sample_training_case(
+        sampled = sample_warped_training_case(
             dataframe,
             points_per_case=points_per_case,
             seed=seed + index,
+            rear_liquidus_points=rear_liquidus_points_per_case,
         )
         sampled_cases.append(sampled)
 
@@ -343,6 +523,9 @@ def build_warped_training_table(
                 "velocity_m_s": case.velocity_m_s,
                 "available_points": len(dataframe),
                 "sampled_points": len(sampled),
+                "sampled_rear_liquidus_points": int(
+                    sampled["rear_liquidus_sample"].sum()
+                ),
                 "sampled_evaporation_points": int(
                     (sampled["T_TCAM"] >= evaporation_threshold).sum()
                 ),
@@ -364,6 +547,7 @@ def fit_residual_gpr(
     seed: int,
     n_restarts_optimizer: int,
     feature_columns: list[str],
+    kernel_name: str,
 ):
     missing = set(feature_columns + ["delta_T_warped"]) - set(training.columns)
     if missing:
@@ -372,14 +556,14 @@ def fit_residual_gpr(
     target = training["delta_T_warped"].to_numpy(dtype=float)
     scaler = fit_feature_scaler(X, feature_columns)
     model = GaussianProcessRegressor(
-        kernel=make_kernel(len(feature_columns)),
+        kernel=make_residual_kernel(len(feature_columns), kernel_name),
         normalize_y=True,
         n_restarts_optimizer=n_restarts_optimizer,
         optimizer="fmin_l_bfgs_b",
         random_state=seed,
     )
     print(
-        f"Fitting Cartesian warped-prior RBF GPR on {len(training)} points "
+        f"Fitting Cartesian warped-prior {kernel_name} GPR on {len(training)} points "
         f"with features {feature_columns}..."
     )
     model.fit(scaler.transform(X), target)
@@ -812,6 +996,7 @@ def run_experiment(args) -> dict:
         warp_max_iterations=args.warp_max_iterations,
         seed=args.seed,
         feature_columns=feature_columns,
+        rear_liquidus_points_per_case=args.rear_liquidus_points_per_case,
     )
     warp_surface = fit_warp_surface(warp_table)
     warp_cv = leave_one_case_out_warp_predictions(warp_table)
@@ -823,6 +1008,7 @@ def run_experiment(args) -> dict:
         args.seed,
         args.n_restarts_optimizer,
         feature_columns=feature_columns,
+        kernel_name=args.kernel,
     )
     gp_fit_seconds = time.perf_counter() - gp_started
 
@@ -905,6 +1091,9 @@ def run_experiment(args) -> dict:
             "held_out_case": split["held_out_case"],
             "held_out_warp": asdict(held_warp),
             "base_temperature_k": BASE_TEMPERATURE_K,
+            "kernel_name": args.kernel,
+            "rear_liquidus_points_per_case": args.rear_liquidus_points_per_case,
+            "rear_liquidus_band_k": REAR_LIQUIDUS_BAND_K,
         },
         bundle_path,
     )
@@ -925,6 +1114,19 @@ def run_experiment(args) -> dict:
         "training_point_count": len(training),
         "feature_columns": feature_columns,
         "radial_feature": args.radial_feature,
+        "kernel_family": args.kernel,
+        "rear_liquidus_sampling": {
+            "requested_points_per_case": args.rear_liquidus_points_per_case,
+            "temperature_band_k": REAR_LIQUIDUS_BAND_K,
+            "rear_tip_window_um": REAR_LIQUIDUS_TIP_WINDOW_UM,
+            "candidate_definition": (
+                "Within the first rear_tip_window_um ahead of the minimum-x "
+                "TCAM-liquidus point, with x < 0, and either "
+                "abs(T_TCAM - Tliq) <= band or T_TCAM >= Tliq while "
+                "T_warped_ET < Tliq"
+            ),
+            "held_out_TCAM_used": False,
+        },
         "excluded_feature_families": [
             "cylindrical coordinates",
             "angular coordinates",
@@ -1011,6 +1213,26 @@ def parse_args(argv=None):
         ),
     )
     parser.add_argument(
+        "--kernel",
+        choices=KERNEL_CHOICES,
+        default="rbf",
+        help=(
+            "Residual-GP covariance family. matern52 changes only the base "
+            "kernel; feature scaling, bounds, white noise, and workflow remain "
+            "the same."
+        ),
+    )
+    parser.add_argument(
+        "--rear-liquidus-points-per-case",
+        type=int,
+        default=0,
+        help=(
+            "Reserve this many points from each fixed per-case GP budget for "
+            "the training-only TCAM rear-tip liquidus neighborhood and "
+            "warped-prior false negatives."
+        ),
+    )
+    parser.add_argument(
         "--load-bundle",
         type=Path,
         help=(
@@ -1027,17 +1249,22 @@ def parse_args(argv=None):
     parser.add_argument("--output-dir", type=Path)
     args = parser.parse_args(argv)
     if args.output_dir is None:
-        args.output_dir = {
-            "none": OUTPUT_DIR,
-            "r_yz": RYZ_OUTPUT_DIR,
-            "r_3d": R3D_OUTPUT_DIR,
-        }[args.radial_feature]
+        args.output_dir = default_output_dir(
+            args.radial_feature,
+            args.kernel,
+            args.rear_liquidus_points_per_case,
+        )
     if args.points_per_case < 10 or args.warp_points_per_case < 10:
         parser.error("Training and warp point counts must each be at least 10.")
     if args.warp_max_iterations < 1:
         parser.error("--warp-max-iterations must be positive.")
     if args.n_restarts_optimizer < 0:
         parser.error("--n-restarts-optimizer cannot be negative.")
+    if not 0 <= args.rear_liquidus_points_per_case < args.points_per_case:
+        parser.error(
+            "--rear-liquidus-points-per-case must be nonnegative and smaller "
+            "than --points-per-case."
+        )
     if args.prediction_grid_stride < 1 or args.prediction_batch_size < 1:
         parser.error("Prediction stride and batch size must be positive.")
     return args
