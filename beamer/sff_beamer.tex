@@ -40,6 +40,45 @@
   \titlepage
 \end{frame}
 
+\begin{frame}[t]{Why Predict Microstructure?}
+  \setbeamerfont{block title}{size=\fontsize{22}{26}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{20}{24}\selectfont}
+  \setbeamerfont{itemize/enumerate body}{size=\fontsize{20}{24}\selectfont}
+  \vspace{0.50cm}
+  {\fontsize{21}{25}\selectfont\centering\textcolor{sffblue}{\textbf{Process parameters affect performance through the thermal history and resulting microstructure.}}\par}
+
+  \vspace{0.75cm}
+  {\fontsize{18}{22}\selectfont\centering
+  \textbf{Composition + Process}
+  \quad$\longrightarrow$\quad
+  \textbf{Thermal History}
+  \quad$\longrightarrow$\quad
+  \textbf{Microstructure}\par}
+
+  \vspace{0.65cm}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \vspace{0.70cm}
+      \begin{itemize}
+        \setlength{\itemsep}{0.65em}
+        \item Microstructure controls strength, ductility, anisotropy, and defect sensitivity.
+        \item A sound melt pool can still solidify into the wrong morphology.
+        \item Predicting structure reduces trial-and-error printing.
+        \item Fast predictions enable composition and process screening.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.56\textheight,keepaspectratio]{../beamer/figures/exaca_microstructure_rolchigo2022.png}
+
+      \vspace{0.22em}
+      {\fontsize{12}{14}\selectfont\color{black!45}
+      ExaCA CA prediction (left) and AM-Bench EBSD (right).\\
+      M. Rolchigo \emph{et al.}, \emph{Comput. Mater. Sci.} 214 (2022) 111692, Fig.~11(b).\par}
+    \end{column}
+  \end{columns}
+\end{frame}
+
 \begin{frame}{The Design Space Is Large}
   \setbeamerfont{block title}{size=\fontsize{22}{26}\selectfont,series=\bfseries}
   \setbeamerfont{block body}{size=\fontsize{19}{23}\selectfont}
@@ -172,82 +211,39 @@
   \end{block}
 \end{frame}
 
-\begin{frame}[t]{Why Predict Microstructure?}
-  \setbeamerfont{block title}{size=\fontsize{22}{26}\selectfont,series=\bfseries}
-  \setbeamerfont{block body}{size=\fontsize{20}{24}\selectfont}
-  \setbeamerfont{itemize/enumerate body}{size=\fontsize{20}{24}\selectfont}
-  \vspace{0.50cm}
-  {\fontsize{21}{25}\selectfont\centering\textcolor{sffblue}{\textbf{Process parameters affect performance through the thermal history and resulting microstructure.}}\par}
-
-  \vspace{0.75cm}
-  {\fontsize{18}{22}\selectfont\centering
-  \textbf{Composition + Process}
-  \quad$\longrightarrow$\quad
-  \textbf{Thermal History}
-  \quad$\longrightarrow$\quad
-  \textbf{Microstructure}\par}
-
-  \vspace{1.15cm}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.52\textwidth}
-      \vspace{0.70cm}
-      \begin{itemize}
-        \setlength{\itemsep}{0.65em}
-        \item Microstructure controls strength, ductility, anisotropy, and defect sensitivity.
-        \item A sound melt pool can still solidify into the wrong morphology.
-        \item Predicting structure reduces trial-and-error printing.
-        \item Fast predictions enable composition and process screening.
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.44\textwidth}
-      \centering
-      \includegraphics[width=\linewidth,height=0.52\textheight,keepaspectratio]{../beamer/figures/phase_field_microstructure_proxy.png}
-
-      \vspace{0.25em}
-      {\fontsize{14}{17}\selectfont Illustrative phase-field style microstructure proxy: thermal history must be connected to grain morphology and phase contrast.\par}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Cellular Automata Solidification Modes}
+\begin{frame}{Different Solidification Modes}
   \setbeamerfont{block title}{size=\fontsize{21}{25}\selectfont,series=\bfseries}
   \setbeamerfont{block body}{size=\fontsize{22}{27}\selectfont}
   \vspace{-0.45em}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.31\textwidth}
       \centering
-      {\fontsize{18}{22}\selectfont\textcolor{sffblue}{\textbf{Dendritic}}\par}
+      {\fontsize{18}{22}\selectfont\textcolor{sffblue}{\textbf{Equiaxed}}\par}
       \vspace{0.2em}
-      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer/figures/ca_modes/ca_dendritic.png}
-
-      \vspace{0.2em}
-      {\fontsize{13}{16}\selectfont Branching growth when interface perturbations are amplified by undercooling and solute rejection.\par}
+      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer/figures/ca_modes/ca_dendritic_mumatscale.png}
     \end{column}
     \begin{column}{0.31\textwidth}
       \centering
       {\fontsize{18}{22}\selectfont\textcolor{sffblue}{\textbf{Columnar}}\par}
       \vspace{0.2em}
-      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer/figures/ca_modes/ca_columnar_dendritic.png}
-
-      \vspace{0.2em}
-      {\fontsize{13}{16}\selectfont Competing primary trunks aligned with heat flow select $\lambda_1$; sidebranching sets $\lambda_2$.\par}
+      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer/figures/ca_modes/ca_columnar_mumatscale.png}
     \end{column}
     \begin{column}{0.31\textwidth}
       \centering
       {\fontsize{18}{22}\selectfont\textcolor{sffblue}{\textbf{Planar}}\par}
       \vspace{0.2em}
-      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer/figures/ca_modes/ca_planar.png}
-
-      \vspace{0.2em}
-      {\fontsize{13}{16}\selectfont A stable solid--liquid front advances when the thermal gradient suppresses morphological instability.\par}
+      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer/figures/ca_modes/ca_planar_mumatscale.png}
     \end{column}
   \end{columns}
 
-  \vspace{0.70cm}
-  \begin{alertblock}{{\fontsize{22}{26}\selectfont Use in this workflow}}
+  \vspace{0.18em}
+  {\centering\fontsize{10}{12}\selectfont\textcolor{black!45}{Demonstrative cellular automata simulations only.}\par}
+
+  \vspace{0.40cm}
+  \begin{alertblock}{{\fontsize{22}{26}\selectfont Rapid Microstructural Prediction is the Goal}}
     \vspace{0.25em}
     {\fontsize{24}{29}\selectfont
-    Eagar--Tsai supplies fast local $G$ and $R$ fields; Bayesian correction should make those fields reliable enough to classify the microstructure.\par}
+    Eagar--Tsai supplies fast $G$ and $R$ fields; KGT solidification theory and the G\"aumann criterion are used to classify the resulting microstructure as planar, columnar, or equiaxed.\par}
     \vspace{0.25em}
   \end{alertblock}
 \end{frame}
