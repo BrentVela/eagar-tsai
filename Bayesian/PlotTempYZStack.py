@@ -18,16 +18,19 @@ except ImportError:
 
 
 ET_TEMPERATURE_FIELD = Path(
-    "beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.vti"
+    "beamer/figures/data/BU_ET/0_250W_0.5ms/ET_temperature.vti"
 )
-TCAM_MESH = Path("beamer/figures/data/result.e")
+ET_TEMPERATURE_ARRAY = None
+ET_SCAN_DIRECTION_X_SIGN = None
+LEFT_PANEL_LABEL = "ET"
+TCAM_MESH = Path("beamer/figures/data/BU_TCAM/alloy0_250_0.5_row11/result.vtu")
 TCAM_TEMPERATURE_ARRAY = "temperature"
 METADATA_CSV = Path(
-    "beamer/figures/250_0.5/ET_meta_alloy0_250_0.5.csv"
+    "beamer/figures/data/BU_ET/0_250W_0.5ms/metadata.csv"
 )
-OUTPUT_DIR = Path("beamer/figures/TCAM")
+OUTPUT_DIR = Path("beamer/figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases")
 
-SLICE_X_UM = (0.0, 80.0, 160.0)
+SLICE_X_UM = (0.0, 75.0, 150.0)
 PLOT_Y_LIMIT_UM = 100.0
 PLOT_Z_MIN_UM = -115.0
 SAMPLE_GRID_NY = 241
@@ -39,7 +42,11 @@ MIN_TCAM_CONTOUR_LENGTH_UM = 5.0
 
 def load_et_slices():
     """Load all requested ET planes from one structured temperature field."""
-    field = load_et_temperature_field(ET_TEMPERATURE_FIELD)
+    field = load_et_temperature_field(
+        ET_TEMPERATURE_FIELD,
+        temperature_array=ET_TEMPERATURE_ARRAY,
+        scan_direction_x_sign=ET_SCAN_DIRECTION_X_SIGN,
+    )
     slices = {}
     for x in SLICE_X_UM:
         # SLICE_X_UM is distance behind the laser. The trailing direction is
@@ -225,6 +232,30 @@ def parse_args():
         type=Path,
         help="Optional output PNG path; otherwise the slice locations name it.",
     )
+    parser.add_argument(
+        "--et-temperature-field",
+        type=Path,
+        default=ET_TEMPERATURE_FIELD,
+        help="Structured VTI or legacy CSV shown in the left half.",
+    )
+    parser.add_argument(
+        "--et-temperature-array",
+        default=ET_TEMPERATURE_ARRAY,
+        help="Optional VTI point-data array for the left temperature field.",
+    )
+    parser.add_argument(
+        "--et-scan-direction-x-sign",
+        type=int,
+        choices=(-1, 1),
+        default=ET_SCAN_DIRECTION_X_SIGN,
+        help="Override the left field's scan-direction sign.",
+    )
+    parser.add_argument(
+        "--left-label",
+        default=LEFT_PANEL_LABEL,
+        help="Heading for the left half of the comparison.",
+    )
+    parser.add_argument("--tcam-mesh", type=Path, default=TCAM_MESH)
     return parser.parse_args()
 
 
@@ -326,7 +357,24 @@ def main(slice_x_um=SLICE_X_UM, output_png=None):
         axis.set_ylabel("z (um)", fontsize=9)
         axis.tick_params(labelsize=8)
 
-    axes[0].set_title("ET                                   TCAM", fontsize=12)
+    axes[0].text(
+        0.25,
+        1.025,
+        LEFT_PANEL_LABEL,
+        transform=axes[0].transAxes,
+        ha="center",
+        va="bottom",
+        fontsize=12,
+    )
+    axes[0].text(
+        0.75,
+        1.025,
+        "TCAM",
+        transform=axes[0].transAxes,
+        ha="center",
+        va="bottom",
+        fontsize=12,
+    )
     axes[-1].set_xlabel("y (um)", fontsize=10)
 
     plot_bottom = 0.75 / figure_height if any_keyhole else 0.04
@@ -370,4 +418,9 @@ def main(slice_x_um=SLICE_X_UM, output_png=None):
 
 if __name__ == "__main__":
     arguments = parse_args()
+    ET_TEMPERATURE_FIELD = arguments.et_temperature_field
+    ET_TEMPERATURE_ARRAY = arguments.et_temperature_array
+    ET_SCAN_DIRECTION_X_SIGN = arguments.et_scan_direction_x_sign
+    LEFT_PANEL_LABEL = arguments.left_label
+    TCAM_MESH = arguments.tcam_mesh
     main(arguments.slices, arguments.output)

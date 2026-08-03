@@ -141,9 +141,9 @@ BASE_FEATURE_COLUMNS = ["P", "V", "x", "y", "z", "T_warped_ET"]
 # Backward-compatible name for the original controlled six-input experiment.
 FEATURE_COLUMNS = BASE_FEATURE_COLUMNS
 POINTS_PER_TRAINING_CASE = 500
-N_RESTARTS_OPTIMIZER = 1
+N_RESTARTS_OPTIMIZER = 3
 WARP_SURFACE_RIDGE_ALPHA = 2.0e-2
-KERNEL_CHOICES = ("rbf", "matern52")
+KERNEL_CHOICES = ("rbf", "matern32", "matern52")
 REAR_LIQUIDUS_BAND_K = 300.0
 REAR_LIQUIDUS_TIP_WINDOW_UM = 25.0
 
@@ -299,13 +299,14 @@ def make_residual_kernel(n_features: int, kernel_name: str):
     """Build a controlled anisotropic residual-GP kernel."""
     if kernel_name == "rbf":
         return make_kernel(n_features)
-    if kernel_name == "matern52":
+    if kernel_name in {"matern32", "matern52"}:
+        nu = 1.5 if kernel_name == "matern32" else 2.5
         return (
             ConstantKernel(1.0, (1.0e-3, 1.0e3))
             * Matern(
                 length_scale=np.ones(n_features),
                 length_scale_bounds=(0.05, 1.0e3),
-                nu=2.5,
+                nu=nu,
             )
             + WhiteKernel(
                 noise_level=1.0,
@@ -787,11 +788,14 @@ def write_parity_plot(held_out: pd.DataFrame, output_path: Path) -> None:
     ):
         axis.scatter(truth, values, s=8, alpha=0.22, label=label, color=color)
     axis.plot([lower, upper], [lower, upper], "k--", linewidth=1.4)
-    axis.set_xlabel("Held-out TCAM temperature (K)")
-    axis.set_ylabel("Predicted temperature (K)")
-    axis.set_title("Cartesian warped ET + residual GPR: held-out case")
+    axis.set_xlabel("Held-out TCAM temperature (K)", fontsize=16)
+    axis.set_ylabel("Predicted temperature (K)", fontsize=16)
+    axis.set_title(
+        "Cartesian warped ET + residual GPR: held-out case", fontsize=18
+    )
+    axis.tick_params(axis="both", labelsize=14)
     axis.grid(alpha=0.15)
-    axis.legend()
+    axis.legend(fontsize=14)
     mae = mean_absolute_error(truth, held_out["T_pred"])
     rmse = mean_squared_error(truth, held_out["T_pred"]) ** 0.5
     axis.text(
@@ -801,7 +805,7 @@ def write_parity_plot(held_out: pd.DataFrame, output_path: Path) -> None:
         transform=axis.transAxes,
         ha="right",
         va="bottom",
-        fontsize=10,
+        fontsize=16,
         bbox={
             "boxstyle": "round,pad=0.45",
             "facecolor": "white",
@@ -909,11 +913,21 @@ def export_saved_model_prediction(args) -> dict:
     if tuple(feature_columns or ()) not in valid_feature_sets:
         raise ValueError(f"Unsupported saved feature columns: {feature_columns!r}.")
     held = bundle["held_out_case"]
-    et_field = Path(held["et_field"])
+    et_field = args.prediction_et_field or Path(held["et_field"])
+    power_w = (
+        float(args.prediction_power_w)
+        if args.prediction_power_w is not None
+        else float(held["power_w"])
+    )
+    velocity_m_s = (
+        float(args.prediction_velocity_m_s)
+        if args.prediction_velocity_m_s is not None
+        else float(held["velocity_m_s"])
+    )
     held_et_case = ETPriorCase(
-        case_id=held["case_id"],
-        power_w=float(held["power_w"]),
-        velocity_m_s=float(held["velocity_m_s"]),
+        case_id=f"prediction_{power_w:g}W_{velocity_m_s:g}ms",
+        power_w=power_w,
+        velocity_m_s=velocity_m_s,
         et_field=et_field,
         et_metadata=et_field.with_name("metadata.csv"),
     )
@@ -1217,9 +1231,9 @@ def parse_args(argv=None):
         choices=KERNEL_CHOICES,
         default="rbf",
         help=(
-            "Residual-GP covariance family. matern52 changes only the base "
-            "kernel; feature scaling, bounds, white noise, and workflow remain "
-            "the same."
+            "Residual-GP covariance family. The Matérn choices change only "
+            "the base kernel smoothness; feature scaling, bounds, white noise, "
+            "and workflow remain the same."
         ),
     )
     parser.add_argument(
@@ -1244,6 +1258,21 @@ def parse_args(argv=None):
         "--prediction-output",
         type=Path,
         help="Optional VTI path for --load-bundle prediction-only mode.",
+    )
+    parser.add_argument(
+        "--prediction-et-field",
+        type=Path,
+        help="Optional arbitrary ET VTI for --load-bundle prediction-only mode.",
+    )
+    parser.add_argument(
+        "--prediction-power-w",
+        type=float,
+        help="Power associated with --prediction-et-field.",
+    )
+    parser.add_argument(
+        "--prediction-velocity-m-s",
+        type=float,
+        help="Velocity associated with --prediction-et-field.",
     )
     parser.add_argument("--seed", type=int, default=RANDOM_SEED)
     parser.add_argument("--output-dir", type=Path)

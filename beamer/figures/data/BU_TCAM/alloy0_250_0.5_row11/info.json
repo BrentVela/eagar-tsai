@@ -93,8 +93,8 @@
   "evaporateTemperature": 5792.901462015859,
   "mainFileName": "result.vtu",
   "number": -1,
-  "expWidth": NaN,
-  "expDepth": NaN,
+  "expWidth": 0,
+  "expDepth": 0,
   "nativeMainFileName": "result.pvd",
   "archiveFormat": "consolidated-vtu"
 }

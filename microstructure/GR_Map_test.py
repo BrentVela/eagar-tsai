@@ -13,7 +13,7 @@ thermo_db = "TCHEA8"
 kinetic_db = "MOBHEA3"
 primary_phase = "BCC_B2"
 interfacial_energy = None
-output_path = "beamer/figures/bayesian/warped_cartesian_r3d_matern52_gpr/GR_map_overlayET_TCAM_BU_alloy0_250_0.png"
+output_path = "beamer/figures/bayesian/cartesian_1to1/GR_map2_overlayET_TCAM_BU_alloy0_250_0.png"
 include_overlay = True
 include_corrected_overlay = True
 show_cet_lines = False
@@ -41,17 +41,17 @@ if include_overlay:
     ]
 
 if include_overlay and include_corrected_overlay:
-    overlay_csv.append(REPO_ROOT / "beamer/figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/heldout_GR_data.csv")
+    overlay_csv.append(REPO_ROOT / "beamer/figures/bayesian/cartesian_1to1/BU_GR_data.csv")
     overlay_label.append("Corrected liquidus points")
     # Keep corrected points above ET even though ET is appended afterward.
     overlay_kwargs.append(
-        {"c": "deepskyblue", "s": 3, "alpha": 0.1, "zorder": 7}
+        {"c": "deepskyblue", "s": 3, "alpha": 0.1, "zorder": 6}
     )
 
 if include_overlay:
     overlay_csv.append(REPO_ROOT / "beamer/figures/250_0.5/liquidus_GR_alloy0_250_0.5.csv")
     overlay_label.append("ET liquidus boundary")
-    overlay_kwargs.append({"c": "gold", "s": 4, "alpha": 0.35, "zorder": 6})
+    overlay_kwargs.append({"c": "gold", "s": 4, "alpha": 0.35, "zorder": 7})
 
 # To overlay multiple CSVs, use lists with matching lengths:
 # overlay_csv = [

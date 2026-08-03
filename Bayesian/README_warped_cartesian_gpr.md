@@ -135,6 +135,23 @@ beamer/figures/bayesian/warped_cartesian_r3d_matern52_gpr/
 The recorded production run used `n_restarts_optimizer=1` and took 2400.7
 seconds, or approximately 40 minutes.
 
+## Run the controlled Matérn-3/2 experiment
+
+To change only the Matérn smoothness from `nu=2.5` to `nu=1.5`, while keeping
+the recommended `r_3d` feature and using three optimizer restarts:
+
+```bash
+.venv/bin/python -u Bayesian/GPR_multi_cartesian_warped.py \
+  --radial-feature r_3d \
+  --kernel matern32 \
+  --n-restarts-optimizer 3
+```
+
+The separate output directory is
+`beamer/figures/bayesian/warped_cartesian_r3d_matern32_gpr/`.
+In scikit-learn, three restarts means one initial optimizer run followed by
+three restarted runs, for four sequential hyperparameter optimizations total.
+
 ## Important output files
 
 | File | Purpose |

@@ -152,7 +152,7 @@ def _validate_field(field):
     return field
 
 
-def _load_vti(path):
+def _load_vti(path, temperature_array=None, scan_direction_x_sign=None):
     import pyvista as pv
 
     grid = pv.read(path)
@@ -161,10 +161,12 @@ def _load_vti(path):
             f"Expected VTK ImageData in {path}, found {type(grid).__name__}."
         )
 
-    array_name = next(
-        (name for name in TEMPERATURE_ARRAY_ALIASES if name in grid.point_data),
-        None,
-    )
+    array_name = temperature_array
+    if array_name is None:
+        array_name = next(
+            (name for name in TEMPERATURE_ARRAY_ALIASES if name in grid.point_data),
+            None,
+        )
     if array_name is None:
         raise ValueError(
             f"No ET temperature point array found in {path}. Available "
@@ -182,14 +184,16 @@ def _load_vti(path):
         grid.point_data[array_name],
         dtype=float,
     ).reshape(dimensions, order="F")
-    if "scan_direction_x_sign" in grid.field_data:
-        scan_direction_x_sign = int(
+    if scan_direction_x_sign is not None:
+        resolved_scan_direction_x_sign = int(scan_direction_x_sign)
+    elif "scan_direction_x_sign" in grid.field_data:
+        resolved_scan_direction_x_sign = int(
             np.asarray(grid.field_data["scan_direction_x_sign"]).flat[0]
         )
     else:
         # VTI files written directly by eagar_tsai use +x for the trailing
         # wake, so the laser scans toward -x.
-        scan_direction_x_sign = -1
+        resolved_scan_direction_x_sign = -1
 
     # Normalize negative VTK spacing to increasing interpolation axes.
     axes = list(axes)
@@ -205,7 +209,7 @@ def _load_vti(path):
             z_um=np.asarray(axes[2]),
             temperature_k=temperature,
             source=path,
-            scan_direction_x_sign=scan_direction_x_sign,
+            scan_direction_x_sign=resolved_scan_direction_x_sign,
         )
     )
 
@@ -241,12 +245,21 @@ def _load_csv(path):
     )
 
 
-def load_et_temperature_field(path):
+def load_et_temperature_field(
+    path,
+    *,
+    temperature_array=None,
+    scan_direction_x_sign=None,
+):
     """Load an ET ``.vti`` efficiently, with legacy ``.csv`` support."""
     path = Path(path)
     suffix = path.suffix.lower()
     if suffix == ".vti":
-        return _load_vti(path)
+        return _load_vti(
+            path,
+            temperature_array=temperature_array,
+            scan_direction_x_sign=scan_direction_x_sign,
+        )
     if suffix == ".csv":
         return _load_csv(path)
     raise ValueError(
