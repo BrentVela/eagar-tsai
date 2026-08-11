@@ -2,7 +2,7 @@
 
 Tools for rapid microstructure prediction in laser powder bed fusion. The repository combines the Eagar–Tsai (ET) analytical thermal model, Thermo-Calc Additive Manufacturing (TCAM) reference simulations, Gaussian-process discrepancy correction, thermal-gradient/solidification-rate (`G`–`R`) extraction, and CET/KGT-based microstructure analysis.
 
-The current demonstration uses Hf<sub>2</sub>Mo<sub>2</sub>Ta<sub>48</sub>W<sub>48</sub> and supports the SFF Symposium 2026 presentation, “Rapid Microstructure Prediction in Laser Powder Bed Fusion Using Bayesian Updating of Eagar–Tsai Model.” See [`beamer/README.md`](beamer/README.md) for the presentation-specific reproduction guide and [`Bayesian/README_warped_cartesian_gpr.md`](Bayesian/README_warped_cartesian_gpr.md) for the recommended warped-prior GPR model and recorded results.
+The current demonstration uses Hf<sub>2</sub>Mo<sub>2</sub>Ta<sub>48</sub>W<sub>48</sub> and supports the SFF Symposium 2026 presentation, “Rapid Microstructure Prediction in Laser Powder Bed Fusion Using Bayesian Updating of Eagar–Tsai Model.” See [`beamer/README.md`](beamer/README.md) for the presentation-specific reproduction guide and [`Bayesian/README.md`](Bayesian/README.md) for the recommended warped-prior GPR model and recorded results.
 
 ## What is in the repository?
 
@@ -13,7 +13,7 @@ The current demonstration uses Hf<sub>2</sub>Mo<sub>2</sub>Ta<sub>48</sub>W<sub>
 | `workflow_bayesian.py` | Regenerates the Python-controlled single-case and warped-GPR presentation products from prepared ET/TCAM data |
 | `Bayesian/ET_prior.py` | Generates ET priors for a batch of power–velocity cases |
 | `Bayesian/GPR_multi_warped.py` | Recommended model: learns a Cartesian ET warp and a residual Gaussian process, then predicts a held-out condition without opening its TCAM field |
-| `Bayesian/GPR_multi.py`, `GPR_multi_cartesian.py`, `GPR_cylindrical_warped.py`, `GPR.py` | Earlier multicase, Cartesian, cylindrical-warped, and single-case discrepancy models retained for comparison; the active warped workflow is self-contained in `GPR_multi_warped.py` |
+| `Bayesian/GPR.py` | Earlier single-case discrepancy model retained for comparison; the active warped workflow is self-contained in `GPR_multi_warped.py` |
 | `Bayesian/CompareGR.py`, `CompareMicrostructure.py` | Compare TCAM and Bayesian-updated `G`–`R` fields and resulting microstructures |
 | `microstructure/` | `G`–`R` extraction, Thermo-Calc CET maps, projections, and classification utilities |
 | `beamer/` | SFF 2026 Beamer deck, generated figures, CA illustrations, and presentation documentation |
@@ -87,7 +87,7 @@ beamer/figures/bayesian/multi_warped_gpr/
   heldout_250W_0.5ms_15cases/
 ```
 
-The detailed model equations, leakage safeguards, controlled variants, output schema, and benchmark results are documented in [`Bayesian/README_warped_cartesian_gpr.md`](Bayesian/README_warped_cartesian_gpr.md).
+The detailed model equations, leakage safeguards, controlled variants, output schema, and benchmark results are documented in [`Bayesian/README.md`](Bayesian/README.md).
 
 ## Data conventions
 

@@ -7,8 +7,7 @@ adds the Cartesian distance `r_3d` to the residual-GP inputs and uses a
 Matérn-5/2 covariance.
 
 Its case discovery, sampling, Cartesian-warp, prediction-grid, and VTI-writing
-logic is self-contained. It does not import the older `GPR_multi.py`,
-`GPR_multi_cartesian.py`, or `GPR_cylindrical_warped.py` experiments.
+logic is self-contained.
 
 This implementation is not cylindrical. It does not use `theta`, Peclet
 number, or dimensionless spatial coordinates.
