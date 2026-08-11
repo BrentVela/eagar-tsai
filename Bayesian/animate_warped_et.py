@@ -13,18 +13,18 @@ import pandas as pd
 
 try:
     from .et_temperature_field import load_et_temperature_field
-    from .GPR_cylindrical_warped import WarpParameters, evaluate_warped_et
+    from .GPR_multi_warped import WarpParameters, evaluate_warped_et
 except ImportError:
     from et_temperature_field import load_et_temperature_field
-    from GPR_cylindrical_warped import WarpParameters, evaluate_warped_et
+    from GPR_multi_warped import WarpParameters, evaluate_warped_et
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CASE_DIR = REPO_ROOT / "beamer/figures/data/BU_ET/0_250W_0.5ms"
 OUTPUT_DIR = (
     REPO_ROOT
-    / "beamer/figures/bayesian/warped_cartesian_r3d_matern52_gpr"
-    / "heldout_250W_0.5ms_15trainingcases"
+    / "beamer/figures/bayesian/multi_warped_gpr"
+    / "heldout_250W_0.5ms_15cases"
 )
 OUTPUT_MP4 = OUTPUT_DIR / "warped_et_prior_animation.mp4"
 OUTPUT_POSTER = OUTPUT_DIR / "warped_et_prior_animation_poster.png"

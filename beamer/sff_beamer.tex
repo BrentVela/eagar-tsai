@@ -304,7 +304,7 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{Eagar--Tsai Model Foundation}
+\begin{frame}{Eagar--Tsai (ET) Model Foundation}
   \vspace{-0.55em}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.49\textwidth}
@@ -495,7 +495,7 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{Thermo-Calc AM Module}
+\begin{frame}{Thermo-Calc AM Module (TCAM)}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.58\textwidth}
       \centering
@@ -672,7 +672,7 @@
         \centering
         {\fontsize{16}{19}\selectfont\bfseries TCAM ground-truth samples\par}
         \vspace{0.10em}
-        \includegraphics[width=\linewidth,height=0.195\textheight,keepaspectratio]{figures/bayesian/cartesian_1to1/sampled_points_paraview.png}
+        \includegraphics[width=\linewidth,height=0.195\textheight,keepaspectratio]{figures/bayesian/single_training_case/sampled_points_paraview.png}
       \end{minipage}
 
       \vspace{0.18em}
@@ -731,6 +731,40 @@
   \end{columns}
 \end{frame}
 
+\begin{frame}{Single-Case Prediction vs. TCAM Ground Truth}
+  \vspace{-0.70em}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \centering
+      \includegraphics[
+        width=\linewidth,
+        height=0.77\textheight,
+        keepaspectratio
+      ]{figures/bayesian/single_training_case/temperature_comparison_scatter.png}
+    \end{column}
+
+    \begin{column}{0.49\textwidth}
+      \centering
+      {\fontsize{18}{22}\selectfont\bfseries Bayesian-updated ET\par}
+      \vspace{0.08em}
+      \includegraphics[
+        width=\linewidth,
+        height=0.29\textheight,
+        keepaspectratio
+      ]{figures/paraview_corrected.png}
+
+      \vspace{0.35em}
+      {\fontsize{18}{22}\selectfont\bfseries TCAM ground truth\par}
+      \vspace{0.08em}
+      \includegraphics[
+        width=\linewidth,
+        height=0.29\textheight,
+        keepaspectratio
+      ]{figures/paraview_TCAM.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
 \begin{frame}[t]{Bayesian-Updated ET -- Thermal Gradient and Solidification Rate}
   \vspace{0.00em}
   {\fontsize{21}{25}\selectfont\centering
@@ -747,7 +781,7 @@
           width=\linewidth,
           height=0.68\textheight,
           keepaspectratio
-        ]{figures/bayesian/cartesian_1to1/G_projection_TCAM_vs_corrected.png}
+        ]{figures/bayesian/single_training_case/G_projection_TCAM_vs_corrected.png}
       \end{minipage}
 
       \vspace{0.12em}
@@ -763,7 +797,7 @@
           width=\linewidth,
           height=0.68\textheight,
           keepaspectratio
-        ]{figures/bayesian/cartesian_1to1/R_projection_TCAM_vs_corrected.png}
+        ]{figures/bayesian/single_training_case/R_projection_TCAM_vs_corrected.png}
       \end{minipage}
 
       \vspace{0.12em}
@@ -784,7 +818,7 @@
           width=\linewidth,
           height=0.65\textheight,
           keepaspectratio
-        ]{figures/bayesian/cartesian_1to1/GR_map_overlayET_TCAM_BU_alloy0_250_0.png}
+        ]{figures/bayesian/single_training_case/GR_map_overlayET_TCAM_BU_alloy0_250_0.png}
       \end{minipage}
 
       \vspace{0.12em}
@@ -807,7 +841,7 @@
           width=\linewidth,
           height=0.65\textheight,
           keepaspectratio
-        ]{figures/bayesian/cartesian_1to1/microstructure_TCAM_vs_corrected.png}
+        ]{figures/bayesian/single_training_case/microstructure_TCAM_vs_corrected.png}
       \end{minipage}
 
       \vspace{0.12em}
@@ -861,7 +895,7 @@
         width=\linewidth,
         height=0.72\textheight,
         keepaspectratio
-      ]{figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/case_split.png}
+      ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/case_split.png}
 
       \vspace{0.12em}
       {\fontsize{16}{19}\selectfont
@@ -895,13 +929,13 @@
 
     \begin{column}{0.68\textwidth}
       \centering
-      \href{run:figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/warped_et_prior_animation.mp4}{%
+      \href{run:figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/warped_et_prior_animation.mp4}{%
         \XeTeXLinkBox{%
           \includegraphics[
             width=\linewidth,
             height=0.76\textheight,
             keepaspectratio
-          ]{figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/warped_et_prior_animation_poster.png}%
+          ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/warped_et_prior_animation_poster.png}%
         }%
       }
 
@@ -916,75 +950,63 @@
 \begin{frame}{Held-Out Melt Pool Prediction}
   \vspace{-0.65em}
   \begin{columns}[c,onlytextwidth]
-    \begin{column}{0.34\textwidth}
+    \begin{column}{0.40\textwidth}
       {\fontsize{23}{28}\selectfont\centering
       \textcolor{sffblue}{\textbf{The 250 W, 0.5 m/s TCAM field is excluded
       from training and used only after prediction for evaluation.}}\par}
     \end{column}
 
-    \begin{column}{0.63\textwidth}
+    \begin{column}{0.57\textwidth}
       \begin{columns}[c,totalwidth=\linewidth]
-        \begin{column}{0.22\linewidth}
-          \makebox[\linewidth][l]{%
-            \hspace*{5.5em}\parbox{\linewidth}{%
-              \raggedleft
-              {\fontsize{18}{22}\selectfont\bfseries ET prior\par}%
-            }%
-          }
+        \begin{column}{0.31\linewidth}
+          \raggedleft
+          {\fontsize{18}{22}\selectfont\bfseries ET prior\par}
         \end{column}
-        \begin{column}{0.76\linewidth}
+        \begin{column}{0.67\linewidth}
           \centering
-          \hspace*{-0.7em}\includegraphics[
+          \includegraphics[
             width=\linewidth,
             height=0.22\textheight,
             keepaspectratio
-          ]{figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/et_paraview.png}
+          ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/et_paraview.png}
         \end{column}
       \end{columns}
 
       \vspace{-0.02em}
-      \hspace*{0.58\linewidth}{\color{black}\fontsize{21}{24}\selectfont$\downarrow$}\par
+      \hspace*{0.64\linewidth}{\color{black}\fontsize{21}{24}\selectfont$\downarrow$}\par
       \vspace{-0.08em}
 
       \begin{columns}[c,totalwidth=\linewidth]
-        \begin{column}{0.22\linewidth}
-          \makebox[\linewidth][l]{%
-            \hspace*{5.5em}\parbox{\linewidth}{%
-              \raggedleft
-              {\fontsize{18}{22}\selectfont\bfseries Process-dependent\\warped ET prior\par}%
-            }%
-          }
+        \begin{column}{0.31\linewidth}
+          \raggedleft
+          {\fontsize{18}{22}\selectfont\bfseries Process-dependent\\warped ET prior\par}
         \end{column}
-        \begin{column}{0.76\linewidth}
+        \begin{column}{0.67\linewidth}
           \centering
-          \hspace*{-0.7em}\includegraphics[
+          \includegraphics[
             width=\linewidth,
             height=0.22\textheight,
             keepaspectratio
-          ]{figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/warped_et_paraview.png}
+          ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/warped_et_paraview.png}
         \end{column}
       \end{columns}
 
       \vspace{-0.02em}
-      \hspace*{0.58\linewidth}{\color{black}\fontsize{21}{24}\selectfont$\downarrow$}\par
+      \hspace*{0.64\linewidth}{\color{black}\fontsize{21}{24}\selectfont$\downarrow$}\par
       \vspace{-0.08em}
 
       \begin{columns}[c,totalwidth=\linewidth]
-        \begin{column}{0.22\linewidth}
-          \makebox[\linewidth][l]{%
-            \hspace*{5.5em}\parbox{\linewidth}{%
-              \raggedleft
-              {\fontsize{18}{22}\selectfont\bfseries Held-out Bayesian\\prediction\par}%
-            }%
-          }
+        \begin{column}{0.31\linewidth}
+          \raggedleft
+          {\fontsize{18}{22}\selectfont\bfseries Held-out Bayesian\\prediction\par}
         \end{column}
-        \begin{column}{0.76\linewidth}
+        \begin{column}{0.67\linewidth}
           \centering
-          \hspace*{-0.7em}\includegraphics[
+          \includegraphics[
             width=\linewidth,
             height=0.22\textheight,
             keepaspectratio
-          ]{figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/prediction_paraview.png}
+          ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/prediction_paraview.png}
         \end{column}
       \end{columns}
     \end{column}
@@ -1000,7 +1022,7 @@
         width=\linewidth,
         height=0.77\textheight,
         keepaspectratio
-      ]{figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/heldout_parity.png}
+      ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/heldout_parity.png}
     \end{column}
 
     \begin{column}{0.49\textwidth}
@@ -1011,7 +1033,7 @@
         width=\linewidth,
         height=0.29\textheight,
         keepaspectratio
-      ]{figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/prediction_paraview_no_colorbar.png}
+      ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/prediction_paraview_no_colorbar.png}
 
       \vspace{0.35em}
       {\fontsize{18}{22}\selectfont\bfseries TCAM ground truth\par}
@@ -1045,7 +1067,7 @@
         width=\linewidth,
         height=0.82\textheight,
         keepaspectratio
-      ]{figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/Corrected_TCAM_temp_yz_0_75_150um_inferno.png}
+      ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/Corrected_TCAM_temp_yz_0_75_150um_inferno.png}
     \end{column}
     \begin{column}{0.23\textwidth}
       \raggedright
@@ -1073,7 +1095,7 @@
           width=\linewidth,
           height=0.68\textheight,
           keepaspectratio
-        ]{figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/G_projection_TCAM_vs_corrected.png}
+        ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/G_projection_TCAM_vs_corrected.png}
       \end{minipage}
 
       \vspace{0.12em}
@@ -1089,7 +1111,7 @@
           width=\linewidth,
           height=0.68\textheight,
           keepaspectratio
-        ]{figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/R_projection_TCAM_vs_corrected.png}
+        ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/R_projection_TCAM_vs_corrected.png}
       \end{minipage}
 
       \vspace{0.12em}
@@ -1110,7 +1132,7 @@
           width=\linewidth,
           height=0.65\textheight,
           keepaspectratio
-        ]{figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/GR_map_overlayET_TCAM_BU_alloy0_250_0.png}
+        ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/GR_map_overlayET_TCAM_BU_alloy0_250_0.png}
       \end{minipage}
 
       \vspace{0.12em}
@@ -1133,7 +1155,7 @@
           width=\linewidth,
           height=0.65\textheight,
           keepaspectratio
-        ]{figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/microstructure_TCAM_vs_corrected.png}
+        ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/microstructure_TCAM_vs_corrected.png}
       \end{minipage}
 
       \vspace{0.12em}
@@ -1172,6 +1194,7 @@
           \item Improve warped-GPR agreement on the $G$--$R$ map.
           \item Test additional alloy systems.
           \item Predict the onset of keyholing.
+          \item Extend the workflow to realistic part geometries using transient thermal simulations.
         \end{itemize}
       \end{alertblock}
 

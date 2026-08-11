@@ -46,7 +46,7 @@ ET_FIELD = Path("beamer/figures/data/BU_ET/0_250W_0.5ms/ET_temperature.vti")
 ET_META_CSV = Path("beamer/figures/data/BU_ET/0_250W_0.5ms/metadata.csv")
 MATERIAL_DATA = Path("effective_cp_data.xlsx")
 TCAM_FIELD = Path("beamer/figures/data/BU_TCAM/alloy0_250_0.5_row11/TCAM_cropped_alloy0_250_0.5.vtu")
-OUTPUT_DIR = Path("beamer/figures/bayesian/cartesian_solvertest2")
+OUTPUT_DIR = Path("beamer/figures/bayesian/single_training_case")
 
 # Exact GPR gets slow with too many points.
 # Start small. Increase later if it runs comfortably.
@@ -563,6 +563,61 @@ def predict_in_batches(model, scaler, X, batch_size=50000, return_std=True):
     return means
 
 
+def write_temperature_parity_plot(dataframe, output_path):
+    """Plot raw and corrected ET against TCAM with corrected-field errors."""
+    truth = dataframe["T_TCAM"]
+    raw = dataframe["T_ET"]
+    corrected = dataframe["T_corrected"]
+    lower = min(float(truth.min()), float(raw.min()), float(corrected.min()))
+    upper = max(float(truth.max()), float(raw.max()), float(corrected.max()))
+
+    figure, axis = plt.subplots(figsize=(7.4, 6.5))
+    axis.scatter(
+        truth,
+        raw,
+        s=8,
+        alpha=0.22,
+        label="Raw ET",
+        color="tab:blue",
+    )
+    axis.scatter(
+        truth,
+        corrected,
+        s=8,
+        alpha=0.22,
+        label="Corrected ET",
+        color="tab:orange",
+    )
+    axis.plot([lower, upper], [lower, upper], "k--", linewidth=1.4)
+    axis.set_xlabel("TCAM temperature (K)", fontsize=16)
+    axis.set_ylabel("Predicted temperature (K)", fontsize=16)
+    axis.set_title("Raw ET vs corrected ET", fontsize=18)
+    axis.tick_params(axis="both", labelsize=14)
+    axis.grid(alpha=0.15)
+    axis.legend(fontsize=14)
+
+    mae = mean_absolute_error(truth, corrected)
+    rmse = mean_squared_error(truth, corrected) ** 0.5
+    axis.text(
+        0.97,
+        0.03,
+        f"GPR MAE: {mae:.1f} K\nGPR RMSE: {rmse:.1f} K",
+        transform=axis.transAxes,
+        ha="right",
+        va="bottom",
+        fontsize=16,
+        bbox={
+            "boxstyle": "round,pad=0.45",
+            "facecolor": "white",
+            "edgecolor": "0.35",
+            "alpha": 0.92,
+        },
+    )
+    figure.tight_layout()
+    figure.savefig(output_path, dpi=220)
+    plt.close(figure)
+
+
 # ============================================================
 # MAIN SCRIPT
 # ============================================================
@@ -835,19 +890,10 @@ def main():
     plt.close()
 
     # 2. TCAM vs raw/corrected temperature.
-    plt.figure(figsize=(6, 6))
-    plt.scatter(df_sample["T_TCAM"], df_sample["T_ET"], s=10, alpha=0.35, label="Raw ET")
-    plt.scatter(df_sample["T_TCAM"], df_sample["T_corrected"], s=10, alpha=0.35, label="Corrected ET")
-    min_val = min(df_sample["T_TCAM"].min(), df_sample["T_ET"].min(), df_sample["T_corrected"].min())
-    max_val = max(df_sample["T_TCAM"].max(), df_sample["T_ET"].max(), df_sample["T_corrected"].max())
-    plt.plot([min_val, max_val], [min_val, max_val], "k--")
-    plt.xlabel("TCAM temperature [K]")
-    plt.ylabel("Predicted temperature [K]")
-    plt.legend()
-    plt.title("Raw ET vs corrected ET")
-    plt.tight_layout()
-    plt.savefig(OUTPUT_DIR / "temperature_comparison_scatter.png", dpi=200)
-    plt.close()
+    write_temperature_parity_plot(
+        df,
+        OUTPUT_DIR / "temperature_comparison_scatter.png",
+    )
 
     # 3. Uncertainty vs absolute residual error.
     df_sample["abs_residual_error"] = np.abs(df_sample["delta_T"] - df_sample["delta_T_pred"])

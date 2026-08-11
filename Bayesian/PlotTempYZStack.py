@@ -22,13 +22,14 @@ ET_TEMPERATURE_FIELD = Path(
 )
 ET_TEMPERATURE_ARRAY = None
 ET_SCAN_DIRECTION_X_SIGN = None
+ET_SLICE_SPACING_UM = None
 LEFT_PANEL_LABEL = "ET"
 TCAM_MESH = Path("beamer/figures/data/BU_TCAM/alloy0_250_0.5_row11/result.vtu")
 TCAM_TEMPERATURE_ARRAY = "temperature"
 METADATA_CSV = Path(
     "beamer/figures/data/BU_ET/0_250W_0.5ms/metadata.csv"
 )
-OUTPUT_DIR = Path("beamer/figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases")
+OUTPUT_DIR = Path("beamer/figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases")
 
 SLICE_X_UM = (0.0, 75.0, 150.0)
 PLOT_Y_LIMIT_UM = 100.0
@@ -40,7 +41,23 @@ MIN_KEYHOLE_WIDTH_CELLS = 3
 MIN_TCAM_CONTOUR_LENGTH_UM = 5.0
 
 
-def load_et_slices():
+def _resampled_axis(axis, limits_um, spacing_um):
+    """Return a regularly spaced subset aligned to the source-grid origin."""
+    lower = max(float(axis[0]), float(limits_um[0]))
+    upper = min(float(axis[-1]), float(limits_um[1]))
+    origin = float(axis[0])
+    first_index = int(np.ceil((lower - origin) / spacing_um - 1.0e-12))
+    last_index = int(np.floor((upper - origin) / spacing_um + 1.0e-12))
+    values = origin + spacing_um * np.arange(first_index, last_index + 1)
+    if values.size == 0:
+        raise ValueError(
+            f"Interpolation spacing {spacing_um:g} um selects no points "
+            f"between {lower:g} and {upper:g} um."
+        )
+    return values
+
+
+def load_et_slices(interpolation_spacing_um=None):
     """Load all requested ET planes from one structured temperature field."""
     field = load_et_temperature_field(
         ET_TEMPERATURE_FIELD,
@@ -48,21 +65,53 @@ def load_et_slices():
         scan_direction_x_sign=ET_SCAN_DIRECTION_X_SIGN,
     )
     slices = {}
+    if interpolation_spacing_um is not None:
+        interpolation_spacing_um = float(interpolation_spacing_um)
+        if interpolation_spacing_um <= 0.0:
+            raise ValueError("ET slice interpolation spacing must be positive.")
+        y = _resampled_axis(
+            field.y_um,
+            (0.0, PLOT_Y_LIMIT_UM),
+            interpolation_spacing_um,
+        )
+        z = _resampled_axis(
+            field.z_um,
+            (PLOT_Z_MIN_UM, 0.0),
+            interpolation_spacing_um,
+        )
+        yy, zz = np.meshgrid(y, z)
+        interpolator = field.interpolator(bounds_error=True)
+
     for x in SLICE_X_UM:
         # SLICE_X_UM is distance behind the laser. The trailing direction is
         # opposite the field's recorded scan direction.
         field_x = -field.scan_direction_x_sign * x
-        actual_x, yy, zz, temperature = field.yz_slice(
-            field_x,
-            y_limits_um=(0.0, PLOT_Y_LIMIT_UM),
-            z_limits_um=(PLOT_Z_MIN_UM, 0.0),
-        )
-        if not np.isclose(actual_x, field_x):
-            print(
-                f"Using nearest ET plane x={actual_x:g} um for requested "
-                f"trailing distance {x:g} um."
+        if interpolation_spacing_um is None:
+            actual_x, yy, zz, temperature = field.yz_slice(
+                field_x,
+                y_limits_um=(0.0, PLOT_Y_LIMIT_UM),
+                z_limits_um=(PLOT_Z_MIN_UM, 0.0),
             )
+            if not np.isclose(actual_x, field_x):
+                print(
+                    f"Using nearest ET plane x={actual_x:g} um for requested "
+                    f"trailing distance {x:g} um."
+                )
+        else:
+            coordinates = np.column_stack(
+                (
+                    np.full(yy.size, field_x),
+                    yy.ravel(),
+                    zz.ravel(),
+                )
+            )
+            temperature = interpolator(coordinates).reshape(yy.shape)
         slices[x] = (yy, zz, temperature)
+    if interpolation_spacing_um is not None:
+        print(
+            "Interpolated plotted ET YZ planes at "
+            f"{interpolation_spacing_um:g} um spacing."
+        )
     return slices, field.temperature_min, field.temperature_max
 
 
@@ -255,11 +304,24 @@ def parse_args():
         default=LEFT_PANEL_LABEL,
         help="Heading for the left half of the comparison.",
     )
+    parser.add_argument(
+        "--et-slice-spacing-um",
+        type=float,
+        default=ET_SLICE_SPACING_UM,
+        help=(
+            "Optionally interpolate only the plotted ET YZ planes at this "
+            "spacing; the source VTI is not modified."
+        ),
+    )
     parser.add_argument("--tcam-mesh", type=Path, default=TCAM_MESH)
     return parser.parse_args()
 
 
-def main(slice_x_um=SLICE_X_UM, output_png=None):
+def main(
+    slice_x_um=SLICE_X_UM,
+    output_png=None,
+    et_slice_spacing_um=ET_SLICE_SPACING_UM,
+):
     global SLICE_X_UM
     SLICE_X_UM = tuple(slice_x_um)
     if output_png is None:
@@ -269,7 +331,9 @@ def main(slice_x_um=SLICE_X_UM, output_png=None):
         METADATA_CSV,
         usecols=["liquidus_temperature_k"],
     ).iloc[0, 0]
-    et_slices, et_global_min, et_global_max = load_et_slices()
+    et_slices, et_global_min, et_global_max = load_et_slices(
+        et_slice_spacing_um
+    )
     tcam_slices = probe_tcam_slices(load_tcam_source())
 
     # Anchor the shared scale to the full ET temperature range. Include a
@@ -423,4 +487,8 @@ if __name__ == "__main__":
     ET_SCAN_DIRECTION_X_SIGN = arguments.et_scan_direction_x_sign
     LEFT_PANEL_LABEL = arguments.left_label
     TCAM_MESH = arguments.tcam_mesh
-    main(arguments.slices, arguments.output)
+    main(
+        arguments.slices,
+        arguments.output,
+        arguments.et_slice_spacing_um,
+    )

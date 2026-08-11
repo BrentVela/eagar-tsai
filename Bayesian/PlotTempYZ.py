@@ -20,7 +20,9 @@ ET_TEMPERATURE_FIELD = Path(
     "beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.vti"
 )
 PARAVIEW_CSV = Path("beamer/figures/data/better_plane_resample.csv") # only need if USE_TCAM_MESH = False
-TCAM_MESH = Path("beamer/figures/data/result.e")
+TCAM_MESH = Path(
+    "beamer/figures/data/BU_TCAM/alloy0_250_0.5_row11/result.vtu"
+)
 TCAM_TEMPERATURE_ARRAY = "temperature"
 USE_TCAM_MESH = True
 METADATA_CSV = Path("beamer/figures/250_0.5/ET_meta_alloy0_250_0.5.csv")

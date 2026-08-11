@@ -39,8 +39,8 @@ from microstructure.PlotMicrostructure import (
 
 
 TCAM_CSV = Path("beamer/figures/data/BU_TCAM/alloy0_250_0.5_row11/TCAM_GR_alloy0_250_0.5.csv")
-CORRECTED_CSV = Path("beamer/figures/bayesian/warped_cartesian_r3d_matern32_gpr/heldout_250W_0.5ms_15trainingcases/heldout_GR_Data.csv")
-OUTPUT_PATH = Path("beamer/figures/bayesian/warped_cartesian_r3d_matern32_gpr/heldout_250W_0.5ms_15trainingcases/microstructure_TCAM_vs_corrected.png")
+CORRECTED_CSV = Path("beamer/figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/heldout_GR_data.csv")
+OUTPUT_PATH = Path("beamer/figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/microstructure_TCAM_vs_corrected.png")
 
 POINT_SIZE = 10
 PLANAR_COLOR = "#b00000"

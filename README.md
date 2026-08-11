@@ -1,234 +1,128 @@
-# Rapid Microstructure Prediction in Laser Powder Bed Fusion Using Bayesian Updating of Eagar–Tsai Model 
+# ETtoKGT
 
-This first section of the README details contributions by Kyle Swartz. To see the original Eagar-Tsai code implemented by Brent Vela, scroll past this section.
+Tools for rapid microstructure prediction in laser powder bed fusion. The repository combines the Eagar–Tsai (ET) analytical thermal model, Thermo-Calc Additive Manufacturing (TCAM) reference simulations, Gaussian-process discrepancy correction, thermal-gradient/solidification-rate (`G`–`R`) extraction, and CET/KGT-based microstructure analysis.
 
-## Setup
+The current demonstration uses Hf<sub>2</sub>Mo<sub>2</sub>Ta<sub>48</sub>W<sub>48</sub> and supports the SFF Symposium 2026 presentation, “Rapid Microstructure Prediction in Laser Powder Bed Fusion Using Bayesian Updating of Eagar–Tsai Model.” See [`beamer/README.md`](beamer/README.md) for the presentation-specific reproduction guide and [`Bayesian/README_warped_cartesian_gpr.md`](Bayesian/README_warped_cartesian_gpr.md) for the recommended warped-prior GPR model and recorded results.
 
-Create and activate a virtual environment, then install the Python dependencies:
+## What is in the repository?
+
+| Area | Purpose |
+| --- | --- |
+| `workflow_ET.py` | End-to-end ET temperature, VTI, liquidus `G`–`R`, CET map, and microstructure workflow for one composition/process condition |
+| `workflow_TCAM.py` | Regenerates the equivalent figures from exported TCAM data and compares ET with TCAM |
+| `workflow_bayesian.py` | Regenerates the Python-controlled single-case and warped-GPR presentation products from prepared ET/TCAM data |
+| `Bayesian/ET_prior.py` | Generates ET priors for a batch of power–velocity cases |
+| `Bayesian/GPR_multi_warped.py` | Recommended model: learns a Cartesian ET warp and a residual Gaussian process, then predicts a held-out condition without opening its TCAM field |
+| `Bayesian/GPR_multi.py`, `GPR_multi_cartesian.py`, `GPR_cylindrical_warped.py`, `GPR.py` | Earlier multicase, Cartesian, cylindrical-warped, and single-case discrepancy models retained for comparison; the active warped workflow is self-contained in `GPR_multi_warped.py` |
+| `Bayesian/CompareGR.py`, `CompareMicrostructure.py` | Compare TCAM and Bayesian-updated `G`–`R` fields and resulting microstructures |
+| `microstructure/` | `G`–`R` extraction, Thermo-Calc CET maps, projections, and classification utilities |
+| `beamer/` | SFF 2026 Beamer deck, generated figures, CA illustrations, and presentation documentation |
+| `et_melt_pool_script.py` | Original/refactored standalone ET melt-pool implementation with optional compiled C integrand |
+
+Most scripts expose their current inputs with `python <script> --help`. Some older exploratory scripts still contain hard-coded paths and are best treated as research artifacts.
+
+## Installation
+
+Python 3.10 or newer is recommended. From the repository root:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
-Some tools are not installed through `requirements.txt`:
+Two external tools are not installed by `requirements.txt`:
 
-- `tc_python` comes from the Thermo-Calc Python SDK and requires a licensed Thermo-Calc installation.
-- The Beamer presentation currently uses the repo-local Tectonic binary at `.tools/bin/tectonic`.
+- `tc_python` is distributed with Thermo-Calc and requires a licensed Thermo-Calc installation. It is needed for CET-map and microstructure steps, but not for ET temperature generation or GPR fitting from existing data.
+- A LaTeX engine is needed only for the presentation. This checkout is set up for the repo-local `.tools/bin/tectonic`; see the Beamer README for alternatives.
 
-## Scripts 
+The main material/process table is `effective_cp_data.xlsx`. The current workflows expect column names such as `Velocity (m/s)`, `Power (W)`, `Beam Diam (m)`, `Absorptivity`, `Liquidus (K)`, `THCD LT (W/mK)`, `RT Density (kg/m3)`, and `Cp, Sheikh (J/kgK)`.
 
-Note: many of these files require you to hardcode the input and output file paths. Additionally, most ET functionality has been updated to use the [eagar-tsai Python library](https://arroyavelab.github.io/eagar-tsai).
+## Quick start
 
-- `workflow_ET.py` runs the complete ET figure pipeline or selected steps. It outputs a temperature heatmap, metadata file, 3D temperature distribution (`.csv` and `.vti`), GR and liquidus data, GR projection, GR map overlay, and microstructure projection.
+Generate the default ET products for Alloy 0 at 250 W and 0.5 m/s:
 
-microstructure/:
-- `GR_Map_test.py` Run this file to calculate GR maps with GR_Map.py. This file requires alloy data as input and can overlay liquidus GR points onto the GR map if provided in a csv.
-- `GR_Map.py` Code written by James Hanagan to calculate GR maps using TC-Python.
-- `GRFrom3D.py` Calculates thermal gradient (G) and solidification rate (R) given a .vti file, and outputs a csv.
-- `GRFromHeatmap.py` Calculates thermal gradient (G) and solidification rate (R) given a 2D ET temperature field. Mostly obsolete.
-- `PlotGR.py` Plots G and R as a melt pool projection. Requires a csv as input.
-- `PlotMicrostructure.py` Using a GR Map, classifies the microstructure of points along the liquidus and plots it as a melt pool projection. Uses GR_Map.py and requires a csv as input.
-
-Bayesian/:
-- `ET_prior.py` Given an excel file with alloy data, outputs a 3D temperature distribution and a temperature heatmap. This is the data used in the GPR.
-- `GPR.py` Given an ET 3D temperature distribution csv and a TCAM 3D temperature distribution csv, will learn the error in temperature between ET and TCAM at a number of training points and predicts the corrected melt pool. Outputs a csv that can be viewed in ParaView. Keep in mind that the TCAM data csv must be cropped in ParaView to the exact domain as the ET data.
-- `melt_geometry.py` Given the csv outputted by GPR.py, will print in the terminal the melt pool depth, width, and length for ET, TCAM, and Corrected melt pools. To run:
-   ```bash
-   python Bayesian/melt_geometry.py <pathto>/matched_tcam_corrected_points.csv
-   ```
-- `PlotTempYZ.py` Can plot two melt pool temperature yz slices side by side. Requires temperature data from two different sources.
-
-Miscellaneous:
-- `PrintabilityMap_og.py` Uses old ET code to calculate melt pool geometry for large power-velocity spaces.
-- `PlotMeltDepth.py` Uses data from PrintabilityMap_og.py to generate a melt depth map as a function of power and velocity.
-- `PlotPrintabilityMap.py` Uses data from PrintabilityMap_og.py to generate a printability map.
-- `PrintabilityMap_ET.py` Uses eagar-tsai Python library to calculate printability maps.
-- `effective_heat_capacity.py` Old code to make calculations. Ignore.
-- `TCAM_solver.py` Work in progress to run many TCAM simulations with TC-Python.
-- `eagar_tsai_test.py` Used to run simple ET calculations for quick testing. Outputs a temperature heatmap.
-- `ETtoVTI.py` Creates only a .vti file from an ET run.
-- `ViewVTI.py` Views a .vti file to see 3D eagar-tsai temperature distribution.
-
-Data:
-- `effective_heat_capacity.xlsx` Actually important! This is where I have my updated alloy data using the TCHEA8 CALPHAD database. Includes boiling points and effective heat capacities using different methods. Still, happens to be the main source of data for the other scripts.
-- `et_custom_input_data.xlsx` Shortened version of et_input_data_example.xlsx to navigate easier. Not really used anymore.
-- `et_input_data_example.xlsx` Original refractory high entropy data sheet provided by Brent Vela. Uses TCHEA5 the CALPHAD database, so a little outdated compared to effective_heat_capacity.xlsx. 
-- `TCAM_solver_data.xlsx` Work in progress. Works in tandem with TCAM_solver.py.
-
-#
-# ET Model (Eagar–Tsai)
-
-This project implements the Eagar–Tsai moving heat source model to estimate melt pool dimensions for a scanning laser/beam over a semi‑infinite solid. The temperature field is computed from a 1D integral and evaluated numerically (optionally using a compiled C integrand for speed). Melt pool dimensions are extracted from the liquidus isotherm.
-
-Attribution: The C integrand implementation is based on a reformulation by Sasha Rubenchik (LLNL, 2015).
-
-Reference: T. W. Eagar and N.-S. Tsai, “Temperature Fields Produced by Traveling Distributed Heat Sources,” Welding Journal (Research Supplement), December 1983, pp. 346‑s–354‑s (see `original_ET_paper.pdf`).
-
-Refactor note: Brent Vela refactored this code on January 21, 2026.
-
-## Inputs (per row)
-
-Beam/process:
-- `Velocity_m/s` (scan speed, v) [m/s]
-- `Power` (laser power, P) [W]
-- `Beam_diameter_m` (beam diameter, 2σ) [m]
-- `Absorptivity` (A) [unitless]
-
-Material (liquidus properties):
-- `T_liquidus` [K]
-- `thermal_cond_liq` (k) [W/(m·K)]
-- `Density_kg/m3` (ρ) [kg/m^3]
-- `Cp_J/kg` (cp) [J/(kg·K)]
-
-Fixed/implicit:
-- Ambient temperature `t0 = 300 K`
-- Domain size and spatial resolution (defaults in `compute_melt_pool`)
-
-## Outputs (per row)
-
-- `melt_length` [m]
-- `melt_width` [m]
-- `melt_depth` [m]
-- `melt_length_um` [µm]
-- `melt_width_um` [µm]
-- `melt_depth_um` [µm]
-- `peakT` [K]
-- `minT` [K]
-
-## Equations (as implemented)
-
-Thermal diffusivity:
-```
-alpha = k / (rho * cp)
-```
-
-Non‑dimensional parameter:
-```
-p = alpha / (v * sigma)
-```
-
-Prefactor:
-```
-Ts = (A*P) / (pi*(k/alpha)*sqrt(pi*alpha*v*(sigma^3)))
-```
-
-Temperature field at (x,y,z):
-```
-T = t0 + Ts * ∫_0^∞ f(t, x, y, z, p) dt
-```
-
-Integrand:
-```
-f(t,x,y,z,p) = 1 / ((4 p t + 1) * sqrt(t))
-               * exp( -z^2/(4t) - ((y^2 + (x - t)^2)/(4 p t + 1)) )
-```
-
-## Assumptions
-
-- Semi‑infinite solid; domain only used for numerical evaluation.
-- Constant material properties at liquidus.
-- No melt flow, vaporization, or latent heat effects.
-- Gaussian heat source with constant absorptivity.
-- Steady‑state moving source; integral is evaluated numerically.
-
-## Platform Build Notes (eagar_tsai_integrand)
-
-This project uses a small C helper (`eagar_tsai_integrand.c`) that can be compiled into a shared library to speed up the Eagar–Tsai integration. The Python code will use the compiled library if it is present, and fall back to the slow interpreted integrator if not.
-
-### Windows
-
-#### Option A: MSVC (Visual Studio Developer Command Prompt)
-
-1. Open the **Developer Command Prompt for VS**.
-2. From the project folder, run:
-   ```bat
-   build_windows_dll.bat
-   ```
-
-#### Option B: MinGW-w64 (gcc)
-
-1. Install MinGW-w64 and ensure `gcc` is on your PATH.
-2. From the project folder, run:
-   ```bat
-   build_windows_dll.bat
-   ```
-
-#### PowerShell alternative
-
-If you prefer PowerShell, run:
-```powershell
-.\build_windows_dll.ps1
-```
-
-This produces `libeagar_tsai_integrand.dll` in the same directory as `et_melt_pool_script.py`.
-
-### Linux
-
-From the project folder:
 ```bash
+python workflow_ET.py
+```
+
+The default pipeline writes beneath `beamer/figures/250_0.5/`. It generates a 2D temperature field, a canonical 3D VTI field, liquidus `G`–`R` data, a CET overlay, a projected `G`–`R` field, and a projected microstructure. The CET-dependent steps require TC-Python. Run only selected stages with, for example:
+
+```bash
+python workflow_ET.py --steps temperature-field temperature-3d liquidus
+python workflow_ET.py --steps gr-map gr-projection microstructure
+```
+
+Generate presentation figures from the exported TCAM mesh and `G`–`R` data:
+
+```bash
+python workflow_TCAM.py
+```
+
+Paths, composition row, process settings, grid resolution, databases, and output directories can be overridden through each workflow's CLI.
+
+## Bayesian update workflow
+
+Generate the 16 default ET priors (Excel rows 12–27) used by the multi-case experiments:
+
+```bash
+python Bayesian/ET_prior.py
+```
+
+Each case writes `ET_temperature.vti` and `metadata.csv` beneath `beamer/figures/data/BU_ET/`; heatmaps are enabled by default and CSV export is optional.
+
+Run the recommended held-out model:
+
+```bash
+python -u Bayesian/GPR_multi_warped.py \
+  --radial-feature r_3d \
+  --kernel matern52 \
+  --n-restarts-optimizer 1
+```
+
+The default split trains on 15 complete process cases and holds out 250 W, 0.5 m/s. It first learns a six-parameter Cartesian deformation of the ET field, then fits a Matérn-5/2 GP to the remaining TCAM–ET temperature discrepancy. The blind prediction is written before the held-out TCAM field is opened for evaluation. Outputs include VTI fields, parity plots, uncertainty, metrics, the fitted model bundle, training samples, and warp diagnostics beneath:
+
+```text
+beamer/figures/bayesian/multi_warped_gpr/
+  heldout_250W_0.5ms_15cases/
+```
+
+The detailed model equations, leakage safeguards, controlled variants, output schema, and benchmark results are documented in [`Bayesian/README_warped_cartesian_gpr.md`](Bayesian/README_warped_cartesian_gpr.md).
+
+## Data conventions
+
+- Temperature is in kelvin; coordinates are stored in metres or micrometres as indicated by each file/column.
+- Positive `x` is the laser scan direction. ET-prior outputs are aligned to the raw TCAM coordinate frame.
+- `ET_temperature.vti` or `ET_3D_temperature_*.vti` is the canonical 3D ET representation. Use CSV export only for legacy or external consumers.
+- The multi-case GPR expects paired case directories under `beamer/figures/data/BU_ET/` and `beamer/figures/data/BU_TCAM/`.
+- Large raw and generated datasets are retained selectively. Paths under `beamer/figures/data/` may need to be replaced with local TCAM exports for a new experiment.
+
+## Standalone Eagar–Tsai solver
+
+`et_melt_pool_script.py` is the earlier standalone ET implementation. It evaluates the moving Gaussian heat-source integral over a semi-infinite solid and extracts melt length, width, depth, and extrema from the liquidus isotherm. Its assumptions include constant liquidus properties, constant absorptivity, steady motion, and no explicit melt flow, vaporization, or latent heat.
+
+An optional C helper accelerates the numerical integrand. Build it from the repository root:
+
+```bash
+# Linux
 gcc -O3 -fPIC -shared -o libeagar_tsai_integrand.so eagar_tsai_integrand.c
-```
 
-This produces `libeagar_tsai_integrand.so` in the same directory as `et_melt_pool_script.py`.
-
-### macOS
-
-From the project folder:
-```bash
+# macOS
 clang -O3 -fPIC -shared -o libeagar_tsai_integrand.dylib eagar_tsai_integrand.c
 ```
 
-This produces `libeagar_tsai_integrand.dylib` in the same directory as `et_melt_pool_script.py`.
+On Windows, run `build_windows_dll.bat` from a Visual Studio Developer Command Prompt or MinGW shell, or use `build_windows_dll.ps1`. Without the library, the solver falls back to the slower interpreted integrator.
 
-### Notes
+The main workflows now use the maintained [`eagar-tsai`](https://arroyavelab.github.io/eagar-tsai) Python package instead of this legacy implementation.
 
-- The Python code looks for these files by name in the working directory:
-  - Windows: `libeagar_tsai_integrand.dll`
-  - Linux: `libeagar_tsai_integrand.so`
-  - macOS: `libeagar_tsai_integrand.dylib`
-- The exported C symbol name that Python loads is `eagar_tsai_integrand`.
-- If the compiled library is not found, the code will fall back to the interpreted integrator (much slower).
-- If you change the C function name or file name, rebuild the shared library before running Python.
+## Other utilities
 
+- `PrintabilityMap_ET.py` calculates ET printability maps; `PrintabilityMap_og.py`, `PlotPrintabilityMap.py`, and `PlotMeltDepth.py` retain the earlier workflow.
+- `ETtoVTI.py` and `ViewVTI.py` create and inspect ET VTI fields.
+- `Bayesian/PlotTempYZ.py` and `PlotTempYZStack.py` compare temperature slices.
+- `Bayesian/animate_warped_et.py` recreates the ET-warp animation used in the presentation (requires FFmpeg).
+- `TCAM_solver.py` is experimental automation for TCAM simulations.
 
-## Validation Against Old Predictions
+## References and attribution
 
-If you have legacy ET outputs (e.g., `ET_width_old`, `ET_depth_old`) in the input sheet, you can validate the new run by:
-
-1. Run the model to generate fresh `melt_width`, `melt_depth`, and `melt_length`.
-2. Compare the new outputs to the old columns using summary error metrics and parity plots.
-
-Example (Python):
-```python
-import pandas as pd
-from et_melt_pool_script import compute_melt_pool
-
-# Load input with old ET columns (renamed to *_old)
-df = pd.read_excel("et_input_data_example.xlsx")
-
-# Map material columns used by the model
-# (Adjust names if your sheet uses different headers)
-df["T_liquidus"] = df["PROP LT (K)"]
-df["thermal_cond_liq"] = df["PROP LT THCD (W/(mK))"]
-df["Density_kg/m3"] = df["PROP RT Density (kg/m3)"]
-df["Cp_J/kg"] = df["PROP LT C (J/(kg K))"]
-df["Beam_diameter_m"] = df["Beam Diam (m)"]
-
-# Run ET model
-out = compute_melt_pool(df, workers=1, chunk_size=50)
-
-# Simple error metrics vs. legacy columns
-for col_new, col_old in [("melt_width", "ET_width_old"), ("melt_depth", "ET_depth_old")]:
-    if col_old in out.columns:
-        diff = out[col_new] - out[col_old]
-        mae = diff.abs().mean()
-        rmse = (diff.pow(2).mean()) ** 0.5
-        print(col_new, "MAE:", mae, "RMSE:", rmse)
-```
-
-Recommended checks:
-- Parity plots for width/depth.
-- MAE/RMSE summary and max absolute error.
-- Stratify errors by process parameters (power, speed) to spot systematic drift.
+The ET implementation follows T. W. Eagar and N.-S. Tsai, “Temperature Fields Produced by Traveling Distributed Heat Sources,” *Welding Journal* (1983); a copy is included as `original_ET_paper.pdf`. The C-integrand reformulation is based on work by Sasha Rubenchik (LLNL, 2015). The standalone ET code was originally implemented by Brent Vela and refactored in January 2026. `microstructure/GR_Map.py` was written by James Hanagan.

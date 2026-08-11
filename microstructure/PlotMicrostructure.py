@@ -50,7 +50,10 @@ except ImportError:
     )
 
 
-LIQUIDUS_CSV = ("beamer/figures/data/TCAM_GR_alloy0_250_0.5.csv")
+LIQUIDUS_CSV = (
+    "beamer/figures/data/BU_TCAM/alloy0_250_0.5_row11/"
+    "TCAM_GR_alloy0_250_0.5.csv"
+)
 OUTPUT_PATH = ("beamer/figures/TCAM/TCAM_projected_microstructure_alloy0_250_0.5.png")
 INTERPOLATE_PARAVIEW = False
 INTERPOLATION_Y_POINTS = 75

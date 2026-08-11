@@ -20,8 +20,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 TCAM_CSV = Path("beamer/figures/data/BU_TCAM/alloy0_250_0.5_row11/TCAM_GR_alloy0_250_0.5.csv")
-CORRECTED_CSV = Path("beamer/figures/bayesian/warped_cartesian_r3d_matern32_gpr/heldout_250W_0.5ms_15trainingcases/heldout_GR_Data.csv")
-OUTPUT_DIR = Path("beamer/figures/bayesian/warped_cartesian_r3d_matern32_gpr/heldout_250W_0.5ms_15trainingcases")
+CORRECTED_CSV = Path("beamer/figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/heldout_GR_data.csv")
+OUTPUT_DIR = Path("beamer/figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases")
 G_OUTPUT_NAME = "G_projection_TCAM_vs_corrected.png"
 R_OUTPUT_NAME = "R_projection_TCAM_vs_corrected.png"
 

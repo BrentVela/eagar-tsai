@@ -15,6 +15,4 @@ cache/
 TC_Python/
 .tools/bin/
 .tools/downloads/
-beamer/figures/250_0.5
-beamer/figures/TCAM
 *.joblib

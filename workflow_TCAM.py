@@ -17,17 +17,14 @@ from microstructure.GR_Map import DEFAULT_PRIMARY_PHASE
 
 REPO_ROOT = Path(__file__).resolve().parent
 DEFAULT_EXCEL = REPO_ROOT / "effective_cp_data.xlsx"
-DEFAULT_ROW_INDEX = 2  # Zero-based pandas row index (Excel row 4).
+DEFAULT_ROW_INDEX = 2  # Zero-based pandas row index (EXCEL ROW - 2)
 DEFAULT_ELEMENT_COLS = ["W", "Re", "Nb", "Ta", "Mo", "Hf", "V", "Co", "Cr", "Fe", "Mn", "Ni"]
 DEFAULT_TCAM_GR_CSV = (REPO_ROOT / "beamer/figures/data/BU_TCAM/alloy0_250_0.5_row11/TCAM_GR_alloy0_250_0.5.csv")
 DEFAULT_ET_GR_CSV = (REPO_ROOT / "beamer/figures/250_0.5/liquidus_GR_alloy0_250_0.5.csv")
-DEFAULT_ET_TEMPERATURE_FIELD = (
-    REPO_ROOT
-    / "beamer/figures/data/BU_ET/0_250W_0.5ms/ET_temperature.vti"
-)
+DEFAULT_ET_TEMPERATURE_FIELD = (REPO_ROOT / "beamer/figures/data/BU_ET/0_250W_0.5ms/ET_temperature.vti")
 DEFAULT_ET_METADATA_CSV = (REPO_ROOT / "beamer/figures/250_0.5/ET_meta_alloy0_250_0.5.csv")
 DEFAULT_TCAM_MESH = REPO_ROOT / "beamer/figures/data/BU_TCAM/alloy0_250_0.5_row11/result.vtu"
-DEFAULT_OUTPUT_DIR = REPO_ROOT / "beamer/figures/TCAM2"
+DEFAULT_OUTPUT_DIR = REPO_ROOT / "beamer/figures/TCAM"
 
 DEFAULT_THERMO_DB = "TCHEA8"
 DEFAULT_KINETIC_DB = "MOBHEA3"

@@ -1,13 +1,33 @@
 # Warped Cartesian ET plus residual GPR
 
-`GPR_multi_cartesian_warped.py` predicts TCAM temperature fields using an
+`GPR_multi_warped.py` predicts TCAM temperature fields using an
 Eagar-Tsai (ET) prior, a learned Cartesian warp, and a Gaussian-process model
 of the remaining temperature discrepancy. The current best tested variant
 adds the Cartesian distance `r_3d` to the residual-GP inputs and uses a
 Matérn-5/2 covariance.
 
+Its case discovery, sampling, Cartesian-warp, prediction-grid, and VTI-writing
+logic is self-contained. It does not import the older `GPR_multi.py`,
+`GPR_multi_cartesian.py`, or `GPR_cylindrical_warped.py` experiments.
+
 This implementation is not cylindrical. It does not use `theta`, Peclet
 number, or dimensionless spatial coordinates.
+
+## Requirements and input layout
+
+Install the repository's Python dependencies as described in the
+[root README](../README.md). This workflow does not call TC-Python, but it
+requires previously generated ET and TCAM case data. By default it pairs case
+directories beneath:
+
+```text
+beamer/figures/data/BU_ET/
+beamer/figures/data/BU_TCAM/
+```
+
+Generate the ET side with `python Bayesian/ET_prior.py`. The TCAM side must
+contain the corresponding exported meshes and case metadata. Use `--et-root`,
+`--tcam-root`, and `--material-data` to select a different dataset.
 
 ## Model
 
@@ -120,20 +140,32 @@ not determine the held-out prediction coordinates.
 From the repository root:
 
 ```bash
-.venv/bin/python -u Bayesian/GPR_multi_cartesian_warped.py \
+.venv/bin/python -u Bayesian/GPR_multi_warped.py \
   --radial-feature r_3d \
-  --kernel matern52
+  --kernel matern52 \
+  --n-restarts-optimizer 1
 ```
 
 The output directory is:
 
 ```text
-beamer/figures/bayesian/warped_cartesian_r3d_matern52_gpr/
-  heldout_250W_0.5ms_15trainingcases/
+beamer/figures/bayesian/multi_warped_gpr/
+  heldout_250W_0.5ms_15cases/
 ```
 
-The recorded production run used `n_restarts_optimizer=1` and took 2400.7
-seconds, or approximately 40 minutes.
+The presentation and new runs both use the path above.
+
+The explicit restart setting reproduces the configuration of the recorded
+production run, which took 2400.7 seconds, or approximately 40 minutes. The
+current command-line default is three restarts; omitting the option therefore
+runs four optimizer attempts and may produce a different fitted model.
+
+For the downstream presentation figures, `workflow_bayesian.py` wraps this
+command together with the `G`–`R`, microstructure, CET-overlay, temperature-
+slice, and animation scripts. The corrected liquidus `G`–`R` export and
+ParaView screenshots remain manual steps. See the
+[Beamer README](../beamer/README.md#warped-cartesian-multi-case-figures) for
+the complete figure provenance and required inputs.
 
 ## Run the controlled Matérn-3/2 experiment
 
@@ -141,7 +173,7 @@ To change only the Matérn smoothness from `nu=2.5` to `nu=1.5`, while keeping
 the recommended `r_3d` feature and using three optimizer restarts:
 
 ```bash
-.venv/bin/python -u Bayesian/GPR_multi_cartesian_warped.py \
+.venv/bin/python -u Bayesian/GPR_multi_warped.py \
   --radial-feature r_3d \
   --kernel matern32 \
   --n-restarts-optimizer 3
@@ -167,6 +199,12 @@ three restarted runs, for four sequential hyperparameter optimizations total.
 | `warp_leave_one_case_out.csv` | Leave-one-training-case-out warp response-surface diagnostics |
 | `training_sample.csv` | The 7,500 residual-GP training rows |
 | `case_split.json` | Explicit training and held-out case records |
+
+The fitted `.joblib` bundle is approximately 430 MiB and is intentionally
+excluded by the repository's `*.joblib` ignore rule. It is created locally by
+a training run but cannot be committed to an ordinary GitHub repository
+without Git LFS. The smaller metrics, tables, plots, and VTI comparison fields
+for the recorded production run are retained under the output directory.
 
 The blind prediction VTI contains:
 
@@ -245,7 +283,7 @@ unused quota to the original sampler.
 The focused production command was:
 
 ```bash
-.venv/bin/python -u Bayesian/GPR_multi_cartesian_warped.py \
+.venv/bin/python -u Bayesian/GPR_multi_warped.py \
   --radial-feature r_3d \
   --kernel matern52 \
   --rear-liquidus-points-per-case 30
@@ -266,30 +304,36 @@ Both rear-sampling variants shortened rather than lengthened the held-out
 pool. The focused points had the intended positive discrepancy—their median
 `T_TCAM - T_warped_ET` was about +506 K—but reallocating observations changed
 the single global GP kernel and its process interpolation rather than directly
-constraining held-out geometry. Therefore rear-tip sampling is retained as a
-reproducible negative result and is not enabled by default. The original
+constraining held-out geometry. Therefore rear-tip sampling remains available
+as a reproducible negative result and is not enabled by default. The original
 `r_3d` Matérn-5/2 model remains recommended.
 
-Focused outputs are under
-`warped_cartesian_r3d_matern52_rear_tip30_gpr/`. The earlier broad experiment
-is under `warped_cartesian_r3d_matern52_rear_liquidus_gpr/`.
+Running the focused command writes under
+`warped_cartesian_r3d_matern52_rear_tip30_gpr/`. Those generated outputs are
+not retained in the current checkout. The earlier broad experiment used a
+previous sampler and wrote under
+`warped_cartesian_r3d_matern52_rear_liquidus_gpr/`; its results are reported
+above for provenance, but that earlier sampler and its outputs are not part of
+the current workflow.
 
 ## Other controlled variants
 
 The previous `r_3d` RBF model remains available by omitting `--kernel`:
 
 ```bash
-.venv/bin/python -u Bayesian/GPR_multi_cartesian_warped.py \
+.venv/bin/python -u Bayesian/GPR_multi_warped.py \
   --radial-feature r_3d
 ```
 
 It writes under `warped_cartesian_r3d_gpr/`. The command-line default remains
-RBF for backward compatibility.
+RBF for backward compatibility. Add `--n-restarts-optimizer 1` when reproducing
+the controlled result in the held-out-results table; otherwise the current
+three-restart default is used.
 
 The original six-input Cartesian model remains available:
 
 ```bash
-.venv/bin/python -u Bayesian/GPR_multi_cartesian_warped.py
+.venv/bin/python -u Bayesian/GPR_multi_warped.py
 ```
 
 Its inputs are `P, V, x, y, z, T_warped_ET`, and its outputs are written under
@@ -298,7 +342,7 @@ Its inputs are `P, V, x, y, z, T_warped_ET`, and its outputs are written under
 The cross-sectional-radius ablation is:
 
 ```bash
-.venv/bin/python -u Bayesian/GPR_multi_cartesian_warped.py \
+.venv/bin/python -u Bayesian/GPR_multi_warped.py \
   --radial-feature r_yz
 ```
 
@@ -315,8 +359,8 @@ It retains the solution with the highest log marginal likelihood.
 
 ```text
 --n-restarts-optimizer 0  = 1 total optimization attempt
---n-restarts-optimizer 1  = 2 total optimization attempts (production default)
---n-restarts-optimizer 3  = 4 total optimization attempts
+--n-restarts-optimizer 1  = 2 total optimization attempts (recorded production run)
+--n-restarts-optimizer 3  = 4 total optimization attempts (current CLI default)
 ```
 
 Use zero restarts for smoke tests, one for controlled model comparisons, and
@@ -331,7 +375,7 @@ Use a separate temporary output directory so a smoke test cannot overwrite a
 production model:
 
 ```bash
-.venv/bin/python -u Bayesian/GPR_multi_cartesian_warped.py \
+.venv/bin/python -u Bayesian/GPR_multi_warped.py \
   --radial-feature r_3d \
   --kernel matern52 \
   --points-per-case 20 \
@@ -348,8 +392,8 @@ An existing fitted bundle can generate another ET-grid prediction without
 retraining or opening TCAM:
 
 ```bash
-.venv/bin/python -u Bayesian/GPR_multi_cartesian_warped.py \
-  --load-bundle beamer/figures/bayesian/warped_cartesian_r3d_matern52_gpr/heldout_250W_0.5ms_15trainingcases/warped_cartesian_residual_gpr.joblib \
+.venv/bin/python -u Bayesian/GPR_multi_warped.py \
+  --load-bundle beamer/figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/warped_cartesian_residual_gpr.joblib \
   --prediction-grid-stride 4 \
   --prediction-output /tmp/r3d_matern52_prediction.vti
 ```
