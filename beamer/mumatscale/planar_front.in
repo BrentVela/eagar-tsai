@@ -1,0 +1,57 @@
+BaseFileName planar
+
+# Square x-z section in a three-cell-thick slab.
+NSubblocks 1 1 1
+NCellsPerSB 360 3 360
+FaceCtrl 1 1 1 1 1 1
+CellSize 5.0e-7
+
+FSGrow 0.78
+TimeStep 6.25e-6
+RandSeedVal 3823798712
+
+TipCurvature 1
+GibbsThomsonCoef 4.5e-7
+
+FinishTime 0.05
+FsFinish 0.90
+
+# Al-3 wt% Cu-like binary alloy, matching the dendritic cases.
+LiquidusTemp 925.7
+SolidusTemp 877.8
+Cinit 3.0
+m_solute0 0 0 -2.6
+part_coef0 0 0 0.14
+Dsol 3.0e-13
+Dliq 3.0e-9
+
+# A large G stabilizes the advancing interface against cellular breakdown.
+InitialTemperature 924.2
+Gradient 1.0e5
+Grad_Coef 0
+Velocity 2.0e-3
+Velo_Coef 0
+GradSlope 0
+Slope_Coef 0
+Iso_Coef_One 0
+Iso_Coef_Two 0
+Coef_Iso2 0
+CoolingRate 0
+
+ScreenPFreq 2000
+DataFormat XDMF
+DataWriteFreq 2000
+checkpointfreq 1000000
+
+# Seed every cell in the cold bottom layer. All grains are crystal-aligned, so
+# their merged envelope advances as one planar solid-liquid front.
+MaxGrainDensity 0
+GNGaussCentre 50
+GNGaussSigma 0
+MaxGrainDensitySurf 0
+GNGaussCentreSurf 200
+GNGaussSigmaSurf 0
+MaxTotGrains 2000
+RandomizeGrains 0
+GNOriented 0
+NucVolume 100 0 0 0 1.8e-4 1.5e-6 5.0e-7 0

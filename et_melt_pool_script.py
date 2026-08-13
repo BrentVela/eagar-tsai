@@ -746,10 +746,10 @@ if __name__ == "__main__":
     compute_melt_pool(
         row_num, #results_df if you want all the alloys
         chunk_size=1,
-        workers=1,
-        out_dir='CalcFiles/Bayesian_Data/ET_prior/og_file',
+        workers=10,
+        out_dir='beamer/figures',
         heatmap_rows=[10],      # original row index from the Excel file (EXCEL_ROW# - 2). Selected rows get the 3D temperature CSV and heatmap PNG.
-        heatmap_dir='CalcFiles/Bayesian_Data/ET_prior/og_file',
+        heatmap_dir='beamer/figures',
     )
 
 

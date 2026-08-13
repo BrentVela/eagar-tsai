@@ -7,19 +7,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.patches import Rectangle
+from matplotlib.ticker import ScalarFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.ndimage import gaussian_filter
 from scipy.interpolate import griddata
 
 
-LIQUIDUS_CSV = ("beamer-template/figures/data/TCAM_GR_alloy0_250_0.csv")
-OUTPUT_PATH = ("beamer-template/figures/TCAM/TCAM_projected_GR_alloy0_250_0.5.png")
+LIQUIDUS_CSV = ("beamer/figures2/250_0.5/liquidus_GR_alloy0_250_0.5.csv")
+OUTPUT_PATH = ("beamer/figures2/250_0.5/projected_GR_alloy0_250_0.5.png")
 INTERPOLATE_PARAVIEW = False
 INTERPOLATION_Y_POINTS = 75
 INTERPOLATION_Z_POINTS = 115
 SMOOTHING_SIGMA = 0.0
-POINT_SIZE = 7
+POINT_SIZE = 10
 MICRON_SCALE_THRESHOLD = 1.0e-2
+GRADIENT_K_PER_UM_THRESHOLD = 1.0e4
 
 ET_COLUMNS = {"x", "y", "z", "G", "R"}
 PARAVIEW_COLUMNS = {
@@ -39,6 +41,15 @@ def _coordinates_to_microns(df):
         df.attrs["coordinate_units"] = "m"
     else:
         df.attrs["coordinate_units"] = "um"
+
+
+def _gradient_to_k_per_m(df):
+    positive_gradient = df.loc[df["G"] > 0.0, "G"].to_numpy(dtype=float)
+    if positive_gradient.size and np.median(positive_gradient) < GRADIENT_K_PER_UM_THRESHOLD:
+        df.loc[:, "G"] *= 1.0e6
+        df.attrs["gradient_units"] = "K/um"
+    else:
+        df.attrs["gradient_units"] = "K/m"
 
 
 def _load_liquidus_points(csv_path):
@@ -64,6 +75,7 @@ def _load_liquidus_points(csv_path):
     df = df.dropna(subset=["x", "y", "z", "G", "R"]).copy()
     if df.empty:
         raise ValueError(f"No liquidus points found in {csv_path}.")
+    _gradient_to_k_per_m(df)
 
     df = df.sort_values("x").reset_index(drop=True)
     df.attrs["is_paraview"] = is_paraview
@@ -173,6 +185,10 @@ def plot_gr_projection(
     bottom_colorbar = fig.colorbar(g_scatter, cax=bottom_cax, orientation="horizontal")
     bottom_colorbar.set_label("G (K/m)", fontsize=colorbar_label_fontsize)
     bottom_colorbar.ax.tick_params(labelsize=colorbar_tick_fontsize)
+    gradient_formatter = ScalarFormatter(useMathText=True)
+    gradient_formatter.set_powerlimits((-2, 3))
+    bottom_colorbar.formatter = gradient_formatter
+    bottom_colorbar.update_ticks()
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     fig.savefig(output_path, dpi=300, bbox_inches="tight")

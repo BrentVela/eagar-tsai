@@ -1,0 +1,78 @@
+BaseFileName columnar
+
+# Wide, thin slab. The x-z center plane is rendered for the slide.
+NSubblocks 1 1 1
+NCellsPerSB 600 3 360
+FaceCtrl 1 1 1 1 1 1
+CellSize 5.0e-7
+
+FSGrow 0.78
+TimeStep 6.25e-6
+RandSeedVal 3823798712
+
+TipCurvature 1
+GibbsThomsonCoef 4.5e-7
+
+FinishTime 0.0375
+FsFinish 0.80
+
+# Al-3 wt% Cu-like binary alloy, matching the equiaxed case.
+LiquidusTemp 925.7
+SolidusTemp 877.8
+Cinit 3.0
+m_solute0 0 0 -2.6
+part_coef0 0 0 0.14
+Dsol 3.0e-13
+Dliq 3.0e-9
+
+# The selected dense-column run uses a 30 K/mm gradient, a 2.5 K bottom
+# undercooling, and an upward-moving isotherm.
+InitialTemperature 923.2
+Gradient 3.0e4
+Grad_Coef 0
+Velocity 2.0e-3
+Velo_Coef 0
+GradSlope 0
+Slope_Coef 0
+Iso_Coef_One 0
+Iso_Coef_Two 0
+Coef_Iso2 0
+CoolingRate 0
+
+ScreenPFreq 2000
+DataFormat XDMF
+DataWriteFreq 2000
+checkpointfreq 1000000
+
+# Twenty closely spaced, slightly misoriented boundary nuclei generate the
+# selected dense columnar array.
+MaxGrainDensity 0
+GNGaussCentre 50
+GNGaussSigma 0
+MaxGrainDensitySurf 0
+GNGaussCentreSurf 200
+GNGaussSigmaSurf 0
+MaxTotGrains 64
+RandomizeGrains 0
+GNOriented 1
+
+FixedNuc 7.5e-6   0.75e-6 0.25e-6 1.5707963 -0.105 0 0
+FixedNuc 22.5e-6  0.75e-6 0.25e-6 1.5707963  0.070 0 0
+FixedNuc 37.5e-6  0.75e-6 0.25e-6 1.5707963 -0.035 0 0
+FixedNuc 52.5e-6  0.75e-6 0.25e-6 1.5707963  0.140 0 0
+FixedNuc 67.5e-6  0.75e-6 0.25e-6 1.5707963  0.000 0 0
+FixedNuc 82.5e-6  0.75e-6 0.25e-6 1.5707963 -0.070 0 0
+FixedNuc 97.5e-6  0.75e-6 0.25e-6 1.5707963  0.052 0 0
+FixedNuc 112.5e-6 0.75e-6 0.25e-6 1.5707963 -0.122 0 0
+FixedNuc 127.5e-6 0.75e-6 0.25e-6 1.5707963  0.087 0 0
+FixedNuc 142.5e-6 0.75e-6 0.25e-6 1.5707963 -0.017 0 0
+FixedNuc 157.5e-6 0.75e-6 0.25e-6 1.5707963  0.035 0 0
+FixedNuc 172.5e-6 0.75e-6 0.25e-6 1.5707963 -0.087 0 0
+FixedNuc 187.5e-6 0.75e-6 0.25e-6 1.5707963  0.122 0 0
+FixedNuc 202.5e-6 0.75e-6 0.25e-6 1.5707963 -0.052 0 0
+FixedNuc 217.5e-6 0.75e-6 0.25e-6 1.5707963  0.000 0 0
+FixedNuc 232.5e-6 0.75e-6 0.25e-6 1.5707963  0.105 0 0
+FixedNuc 247.5e-6 0.75e-6 0.25e-6 1.5707963 -0.140 0 0
+FixedNuc 262.5e-6 0.75e-6 0.25e-6 1.5707963  0.017 0 0
+FixedNuc 277.5e-6 0.75e-6 0.25e-6 1.5707963 -0.070 0 0
+FixedNuc 292.5e-6 0.75e-6 0.25e-6 1.5707963  0.070 0 0

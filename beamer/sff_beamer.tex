@@ -1,0 +1,1225 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+\geometry{paperwidth=13.333in,paperheight=7.5in}
+
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else
+  \usepackage{fontspec}
+  \setsansfont{Carlito}[
+    Path=../.tools/fonts/,
+    UprightFont=*-Regular.ttf,
+    BoldFont=*-Bold.ttf,
+    ItalicFont=*-Italic.ttf,
+    BoldItalicFont=*-BoldItalic.ttf
+  ]
+  \setmainfont{Carlito}[
+    Path=../.tools/fonts/,
+    UprightFont=*-Regular.ttf,
+    BoldFont=*-Bold.ttf,
+    ItalicFont=*-Italic.ttf,
+    BoldItalicFont=*-BoldItalic.ttf
+  ]
+  \setmonofont{DejaVu Sans Mono}[Scale=MatchLowercase]
+\fi
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{pgfgantt}
+\usepackage{sff_theme}
+
+\title[Rapid Microstructure Prediction]{Rapid Microstructure Prediction in Laser Powder Bed Fusion\\ Using Bayesian Updating of Eagar--Tsai Model}
+\subtitle{}
+\author[Swartz, Hanagan, Vela, Sarıtürk, Arróyave]{Kyle Swartz, James Hanagan, Brent Vela, Doğuhan Sarıtürk, Raymundo Arróyave}
+\institute[TAMU]{Department of Materials Science and Engineering, Texas A\&M University}
+\date{August 3, 2026}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}[t]{Why Predict Microstructure?}
+  \setbeamerfont{block title}{size=\fontsize{22}{26}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{20}{24}\selectfont}
+  \setbeamerfont{itemize/enumerate body}{size=\fontsize{20}{24}\selectfont}
+  \vspace{0.50cm}
+  {\fontsize{21}{25}\selectfont\centering\textcolor{sffblue}{\textbf{Process parameters affect performance through the thermal history and resulting microstructure.}}\par}
+
+  \vspace{0.75cm}
+  {\fontsize{18}{22}\selectfont\centering
+  \textbf{Composition + Process}
+  \quad$\longrightarrow$\quad
+  \textbf{Thermal History}
+  \quad$\longrightarrow$\quad
+  \textbf{Microstructure}\par}
+
+  \vspace{0.65cm}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \vspace{0.70cm}
+      \begin{itemize}
+        \setlength{\itemsep}{0.65em}
+        \item Microstructure controls strength, ductility, anisotropy, and defect sensitivity.
+        \item A sound melt pool can still solidify into the wrong morphology.
+        \item Predicting structure reduces trial-and-error printing.
+        \item Fast predictions enable composition and process screening.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.56\textheight,keepaspectratio]{../beamer/figures/exaca_microstructure_rolchigo2022.png}
+
+      \vspace{0.22em}
+      {\fontsize{12}{14}\selectfont\color{black!45}
+      ExaCA CA prediction (left) and AM-Bench EBSD (right).\\
+      M. Rolchigo \emph{et al.}, \emph{Comput. Mater. Sci.} 214 (2022) 111692, Fig.~11(b).\par}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The Design Space Is Large}
+  \setbeamerfont{block title}{size=\fontsize{22}{26}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{19}{23}\selectfont}
+  \setbeamerfont{itemize/enumerate body}{size=\fontsize{19}{23}\selectfont}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \centering
+      \begin{tikzpicture}
+        \node[anchor=south west,inner sep=0pt] (compositionmap) at (0,0) {
+          \includegraphics[width=\linewidth,height=0.66\textheight,keepaspectratio]{figures/affine_projection_nimplex_nb_cr_v_w_zr_20pct_pentagon_clean.png}
+        };
+        \begin{scope}[x={(compositionmap.south east)},y={(compositionmap.north west)}]
+          \node[anchor=south,font=\fontsize{20}{24}\selectfont\bfseries] at (0.50,0.955) {W};
+          \node[anchor=west,font=\fontsize{20}{24}\selectfont\bfseries] at (0.925,0.65) {Nb};
+          \node[anchor=north,font=\fontsize{20}{24}\selectfont\bfseries] at (0.755,0.115) {Ta};
+          \node[anchor=north,font=\fontsize{20}{24}\selectfont\bfseries] at (0.235,0.115) {Mo};
+          \node[anchor=east,font=\fontsize{20}{24}\selectfont\bfseries] at (0.070,0.65) {Hf};
+        \end{scope}
+      \end{tikzpicture}
+
+      \vspace{0.3em}
+      {\fontsize{15}{18}\selectfont Five-element projection of a multicomponent composition space.\par}
+    \end{column}
+    \begin{column}{0.04\textwidth}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      {\fontsize{22}{27}\selectfont\centering\textcolor{sffblue}{\textbf{Each alloy has many possible process conditions}}\par}
+
+      \vspace{0.8em}
+      \begin{block}{Composition--Process Space}
+        {\fontsize{21}{25}\selectfont\centering
+        Composition
+        $\;\times\;P\;\times\;v\;\times\;\cdots$\par}
+      \end{block}
+
+      \vspace{0.45em}
+      \begin{itemize}
+        \setlength{\itemsep}{0.65em}
+        \item Cannot practically evaluate every combination with high-fidelity calculations.
+        \item Rapid thermal prediction is needed for high-throughput screening.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.04\textwidth}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[t]{Core Thesis}
+  \setbeamerfont{block title}{size=\fontsize{22}{26}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{20}{24}\selectfont}
+  \setbeamerfont{itemize/enumerate body}{size=\fontsize{20}{24}\selectfont}
+  \vspace{0.90cm}
+
+  {\fontsize{19}{23}\selectfont\centering
+  \textcolor{sffblue}{\textbf{ET is fast enough for high-throughput screening, but not yet reliable enough for microstructure decisions.}}\par}
+
+  \vspace{0.55em}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.27\textwidth}
+      \begin{block}{\centering Eagar--Tsai}
+        \begin{minipage}[t][0.43\textheight][t]{\linewidth}
+        \begin{minipage}[c][0.19\textheight][c]{\linewidth}
+          \centering
+          \includegraphics[width=\linewidth,height=0.18\textheight,keepaspectratio]{figures/paraview_ET.png}
+        \end{minipage}
+
+        \vspace{0.35em}
+        \begin{itemize}
+          \setlength{\itemsep}{0.55em}
+          \item Fast, but has simplified physics
+          \item Run across the design space
+        \end{itemize}
+        \end{minipage}
+      \end{block}
+    \end{column}
+    \begin{column}{0.05\textwidth}
+      \centering
+      {\fontsize{30}{34}\selectfont $+$}
+    \end{column}
+    \begin{column}{0.27\textwidth}
+      \begin{block}{\centering Thermo-Calc AM Module}
+        \begin{minipage}[t][0.43\textheight][t]{\linewidth}
+        \begin{minipage}[c][0.19\textheight][c]{\linewidth}
+          \centering
+          \includegraphics[width=\linewidth,height=0.18\textheight,keepaspectratio]{figures/paraview_TCAM.png}
+        \end{minipage}
+
+        \vspace{0.35em}
+        \begin{itemize}
+          \setlength{\itemsep}{0.55em}
+          \item Higher fidelity, but more computationally expensive
+          \item Run at selected conditions
+        \end{itemize}
+        \end{minipage}
+      \end{block}
+    \end{column}
+    \begin{column}{0.07\textwidth}
+      \centering
+      {\fontsize{30}{34}\selectfont $\longrightarrow$}
+    \end{column}
+    \begin{column}{0.29\textwidth}
+      \begin{alertblock}{\centering Bayesian-Updated ET}
+        \begin{minipage}[t][0.43\textheight][t]{\linewidth}
+        \begin{minipage}[c][0.19\textheight][c]{\linewidth}
+          \centering
+          \includegraphics[width=\linewidth,height=0.17\textheight,keepaspectratio]{figures/paraview_corrected.png}
+        \end{minipage}
+
+        \vspace{0.35em}
+        \begin{itemize}
+          \setlength{\itemsep}{0.55em}
+          \item Learn the TCAM--ET discrepancy
+          \item Correct the ET temperature field
+        \end{itemize}
+        \end{minipage}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.65em}
+  \begin{block}{Microstructure Prediction}
+    {\fontsize{21}{25}\selectfont\centering
+    Corrected 3D temperature field
+    \quad$\longrightarrow$\quad
+    $G$ and $R$
+    \quad$\longrightarrow$\quad
+    KGT
+    \quad$\longrightarrow$\quad
+    As-solidified microstructure\par}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Different Solidification Modes}
+  \setbeamerfont{block title}{size=\fontsize{21}{25}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{22}{27}\selectfont}
+  \vspace{-0.45em}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.31\textwidth}
+      \centering
+      {\fontsize{18}{22}\selectfont\textcolor{sffblue}{\textbf{Equiaxed}}\par}
+      \vspace{0.2em}
+      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer/figures/ca_modes/ca_dendritic_mumatscale.png}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \centering
+      {\fontsize{18}{22}\selectfont\textcolor{sffblue}{\textbf{Columnar}}\par}
+      \vspace{0.2em}
+      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer/figures/ca_modes/ca_columnar_mumatscale.png}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \centering
+      {\fontsize{18}{22}\selectfont\textcolor{sffblue}{\textbf{Planar}}\par}
+      \vspace{0.2em}
+      \includegraphics[width=\linewidth,height=0.40\textheight,keepaspectratio]{../beamer/figures/ca_modes/ca_planar_mumatscale.png}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.18em}
+  {\centering\fontsize{10}{12}\selectfont\textcolor{black!45}{Demonstrative cellular automata simulations only.}\par}
+
+  \vspace{0.40cm}
+  \begin{alertblock}{{\fontsize{22}{26}\selectfont Rapid Microstructural Prediction is the Goal}}
+    \vspace{0.25em}
+    {\fontsize{24}{29}\selectfont
+    Eagar--Tsai supplies fast $G$ and $R$ fields; KGT solidification theory and the G\"aumann criterion are used to classify the resulting microstructure as planar, columnar, or equiaxed.\par}
+    \vspace{0.25em}
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{KGT Solidification Theory}
+  \vspace{-0.35em}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      {
+      \setbeamerfont{block title}{size=\fontsize{22}{26}\selectfont,series=\bfseries}
+      \setbeamerfont{block body}{size=\fontsize{21}{25}\selectfont}
+      \setbeamerfont{itemize/enumerate body}{size=\fontsize{21}{25}\selectfont}
+      \begin{block}{Kurz--Giovanola--Trivedi framework}
+        \vspace{0.4em}
+        \begin{itemize}
+          \item KGT links dendrite-tip operating state to local thermal gradient, $G$, and interface growth rate, $R$.
+          \item The dendrite tip is approximated locally as a paraboloid with radius of curvature $\rho$.
+          \item Tip selection then relates $\rho$ to $R$ and alloy transport and capillarity properties.
+        \end{itemize}
+        \vspace{0.025\textheight}
+      \end{block}
+      }
+
+      \vspace{0.1em}
+      \centering
+      \includegraphics[width=\linewidth,height=0.34\textheight,keepaspectratio]{../beamer/figures/kgt_tip_radii.png}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      {\fontsize{19}{23}\selectfont\textcolor{sffblue}{\textbf{Tip relations}}\par}
+      \vspace{0.35em}
+      {\fontsize{15}{18}\selectfont
+      \[
+      z = \frac{x^2 + y^2}{2\rho}
+      \]
+      \[
+      Pe = \frac{\rho R}{2D_l}
+      \]
+      \[
+      \xi_c =
+      1-\frac{2k}
+      {\left[1+\left(2\pi/Pe\right)^2\right]^{1/2}-1+2k}
+      \]
+      \[
+      \rho =
+      2\pi\left(\frac{\Gamma}{mG_c\xi_c-G}\right)^{1/2}
+      \]
+      }
+
+      \vspace{0.25em}
+      {
+      \setbeamerfont{itemize/enumerate body}{size=\fontsize{18}{22}\selectfont}
+      \begin{itemize}
+        \item $x,y$: transverse tip coordinates; $z$: growth-axis coordinate; $Pe$: solutal Péclet number; $D_l$: liquid diffusivity; $k$: partition coefficient; $\xi_c$: marginal-stability function; $\Gamma$: Gibbs--Thomson coefficient; $m$: liquidus slope; $G_c$: liquid concentration gradient at the interface.
+        \item The coupled relations determine the selected tip radius $\rho$ from local $G$, $R$, and alloy properties.
+      \end{itemize}
+      }
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Eagar--Tsai (ET) Model Foundation}
+  \vspace{-0.55em}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \centering
+      {\fontsize{22}{26}\selectfont\textcolor{sffblue}{\textbf{Original Eagar--Tsai Paper}}\par}
+      \vspace{0.28em}
+
+      {\fontsize{15}{18}\selectfont Transient Gaussian moving heat source}
+      \vspace{0.35em}
+
+      \begin{minipage}[t][0.64\textheight][t]{\linewidth}
+        \begin{tikzpicture}[x=\linewidth,y=1cm]
+          \node[anchor=north east,inner sep=0pt] at (1.0,2.4) {
+            \includegraphics[width=0.50\linewidth]{../beamer/figures/eagar_tsai_og_figure.png}
+          };
+          \node[anchor=west,inner sep=0pt,text width=0.98\linewidth] at (0.0,3.05) {
+            {\fontsize{15}{18}\selectfont
+            \(\displaystyle
+            \begin{aligned}
+            T - T_0
+            &= \frac{1}{2}\int_{0}^{t} dT_i \\
+            &= \frac{q}{\pi\rho C_p\sqrt{4\pi\alpha}}
+            \int_{0}^{t}
+            \frac{(t-t')^{-1/2}}
+                 {2\alpha(t-t')+\sigma^2} \\
+            &\times
+            \exp\Bigg[
+            -\frac{(x-vt')^2+y^2}{4\alpha(t-t')+2\sigma^2}
+            -\frac{z^2}{4\alpha(t-t')}
+            \Bigg]\,dt'
+            \end{aligned}
+            \)
+            }
+          };
+          \node[
+            overlay,
+            anchor=north west,
+            inner sep=0pt,
+            align=left,
+            text width=0.48\linewidth
+          ] at (0.01,-1.35) {
+            {\fontsize{18}{22}\selectfont
+            {\fontsize{22}{26}\selectfont\textcolor{sffblue}{\textbf{Inputs}}}\par
+            \textbf{Process:} $P$, $v$, $d_b$, $A$\par
+            \textbf{Material:} $T_L$, $k_L$, $\rho_0$, $C_p$
+            }
+          };
+          \path (0,0) rectangle (1,4.25);
+        \end{tikzpicture}
+        \vfill
+        {\fontsize{12.5}{15}\selectfont Eagar, T. W., \& Tsai, N. S. (1983). Temperature fields produced by traveling distributed heat sources. \textit{Welding Journal, 62}(12), 346--355.}
+      \end{minipage}
+    \end{column}
+    \begin{column}{0.02\textwidth}
+      \centering
+      \vspace{-0.15em}
+      \rule{0.5pt}{0.80\textheight}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \centering
+      {\fontsize{22}{26}\selectfont\textcolor{sffblue}{\textbf{Refactored Eagar--Tsai Model}}\par}
+      \vspace{0.18em}
+      {\fontsize{15}{18}\selectfont Python library implementation with compiled-C speedup\par}
+      \vspace{0.25em}
+
+      \begin{tikzpicture}[x=\linewidth,y=1cm]
+        \node[anchor=north,inner sep=0pt] at (0.37,-0.72) {
+          \includegraphics[width=0.66\linewidth]{../beamer/figures/dogu_figure_f.png}
+        };
+        \node[anchor=center,inner sep=0pt] at (0.82,-3.50) {
+          \includegraphics[width=0.23\linewidth]{../beamer/figures/logo.png}
+        };
+        \path (0,-4.45) rectangle (1,0);
+      \end{tikzpicture}
+      \vspace{0.05em}
+      {\raggedright
+      \begin{itemize}
+        \item Separates melt-pool prediction, printability maps, 2D heatmap generation, and 3D temperature-field export into reusable steps.
+        \item Compiled C integrand removes Python overhead inside QUADPACK for faster parameter sweeps.
+      \end{itemize}
+      }
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{ET Thermal Cross Sections}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \centering
+      \begin{minipage}[t][0.68\textheight][c]{\linewidth}
+        \centering
+        \begin{tikzpicture}
+          \node[anchor=south west,inner sep=0pt] (etxy) at (0,0) {
+            \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../beamer/figures/250_0.5/temperature_field_alloy0_250_0.5.png}
+          };
+          \begin{scope}[x={(etxy.south east)},y={(etxy.north west)}]
+            \draw[-{Stealth[length=3.2mm]},draw=white,line width=2.4pt]
+              (0.78,0.93) -- (0.60,0.93);
+          \end{scope}
+        \end{tikzpicture}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont Temperature heatmap for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s. Top: $z = 0$ surface. Bottom: $y = 0$ cross section.}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \centering
+      \begin{minipage}[t][0.68\textheight][c]{\linewidth}
+        \centering
+        \begin{tikzpicture}
+          \node[anchor=south west,inner sep=0pt] (etthree) at (0,0) {
+            \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.png}
+          };
+          \begin{scope}[x={(etthree.south east)},y={(etthree.north west)}]
+            \draw[-{Stealth[length=3.2mm]},draw=white,line width=2.4pt]
+              (0.25,0.74) -- (0.44,0.85);
+          \end{scope}
+        \end{tikzpicture}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont 3D view of the ET melt pool for the same alloy and process condition.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{ET Thermal Gradient and Solidification Rate}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \centering
+      \begin{minipage}[t][0.58\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer/figures/250_0.5/projected_GR_alloy0_250_0.5.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont Projection of $G$ and $R$ along the solidification front onto a $yz$ slice for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+    \end{column}
+    \begin{column}{0.08\textwidth}
+      \centering
+      \vspace{0.25\textheight}
+      \begin{tikzpicture}
+        \draw[->,line width=3.2pt,draw=black] (0,0) -- (0.85,0);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \centering
+      \begin{minipage}[t][0.58\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer/figures/TCAM/GR_map_alloy0_250_0.5.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont GR Map calculated with Thermo-Calc CET Property Model for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{ET Microstructure Classification}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \centering
+      \begin{minipage}[t][0.58\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer/figures/250_0.5/GR_map_overlayET_alloy0_250_0.5.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont GR Map calculated with Thermo-Calc CET Property Model with overlaid GR liquidus points for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+    \end{column}
+    \begin{column}{0.08\textwidth}
+      \centering
+      \vspace{0.25\textheight}
+      \begin{tikzpicture}
+        \draw[->,line width=3.2pt,draw=black] (0,0) -- (0.85,0);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \centering
+      \begin{minipage}[t][0.58\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer/figures/250_0.5/projected_microstructure_alloy0_250_0.5.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont Projected microstructure classification along the solidification front onto a $yz$ slice for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Thermo-Calc AM Module (TCAM)}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.58\textwidth}
+      \centering
+      \begin{minipage}[t][0.67\textheight][c]{\linewidth}
+        \centering
+        \begin{tikzpicture}
+          \node[anchor=south west,inner sep=0pt] (tcamview) at (0,0) {
+            \includegraphics[width=\linewidth,height=0.67\textheight,keepaspectratio]{../beamer/figures/TCAM_alloy0_250_0.5.png}
+          };
+          \begin{scope}[x={(tcamview.south east)},y={(tcamview.north west)}]
+            \draw[-{Stealth[length=3.2mm]},draw=white,line width=2.4pt]
+              (0.38,0.18) -- (0.62,0.18);
+          \end{scope}
+        \end{tikzpicture}
+      \end{minipage}
+
+      \vspace{0.2em}
+      {\fontsize{14}{17}\selectfont Steady-state TCAM simulation for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{minipage}[t]{0.94\linewidth}
+      \begin{block}{Higher-Fidelity Thermal Reference}
+        \vspace{0.3em}
+        \begin{itemize}
+          \setlength{\itemsep}{0.35em}
+          \item Integrates FEM for thermal conduction with CFD for melt-pool fluid flow.
+          \item Composition-specific, temperature-dependent thermophysical properties.
+          \item Captures Marangoni flow, keyholing, evaporation, radiation, and convection.
+        \end{itemize}
+        \vspace{0.3em}
+      \end{block}
+
+      \vspace{-0.25em}
+      \begin{block}{Outputs Used in This Work}
+        \vspace{0.3em}
+        \begin{itemize}
+          \setlength{\itemsep}{0.35em}
+          \item 3D temperature field
+          \item Melt-pool geometry
+          \item Thermal gradient ($G$) and solidification rate ($R$) from ParaView post-processing
+        \end{itemize}
+        \vspace{0.3em}
+      \end{block}
+
+      \end{minipage}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{TCAM Thermal Gradient and Solidification Rate}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \centering
+      \vspace{-1.35em}
+      \begin{minipage}[t][0.72\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.72\textheight,keepaspectratio]{../beamer/figures/TCAM/TCAM_projected_GR_alloy0_250_0.5.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      \hspace*{1.6em}\begin{minipage}{0.93\linewidth}
+        {\fontsize{15}{18}\selectfont TCAM projection of $G$ and $R$ along the solidification front onto a $yz$ slice for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+      \end{minipage}
+    \end{column}
+    \begin{column}{0.08\textwidth}
+      \centering
+      \vspace{0.25\textheight}
+      \begin{tikzpicture}
+        \draw[->,line width=3.2pt,draw=black] (0,0) -- (0.85,0);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \centering
+      \vspace{-1.35em}
+      \begin{minipage}[t][0.72\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer/figures/TCAM/GR_map_alloy0_250_0.5.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont GR Map calculated with the Thermo-Calc CET Property Model for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{TCAM Microstructure Classification}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \centering
+      \begin{minipage}[t][0.65\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth,height=0.58\textheight,keepaspectratio]{../beamer/figures/TCAM/GR_map_overlayET_TCAM_alloy0_250_0.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont GR map with TCAM and Eagar--Tsai liquidus-boundary conditions overlaid for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$ (at.\%), $P = 250$ W and $V = 0.5$ m/s.}
+    \end{column}
+    \begin{column}{0.08\textwidth}
+      \centering
+      \vspace{0.25\textheight}
+      \begin{tikzpicture}
+        \draw[->,line width=3.2pt,draw=black] (0,0) -- (0.85,0);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \centering
+      \begin{minipage}[t][0.65\textheight][c]{\linewidth}
+        \centering
+        \hspace*{-0.8em}\includegraphics[width=\linewidth,height=0.65\textheight,keepaspectratio]{../beamer/figures/TCAM/TCAM_projected_microstructure_alloy0_250_0.5.png}
+      \end{minipage}
+
+      \vspace{0.25em}
+      {\fontsize{15}{18}\selectfont TCAM-derived microstructure classification projected along the solidification front onto a $yz$ slice for the same alloy and process condition.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{ET vs.\ TCAM -- Melt Pool Comparison}
+  \vspace{-1.0em}
+  \hspace*{0.25cm}%
+  \begin{minipage}{\textwidth}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.28\textwidth}
+      \raggedleft
+      \raisebox{0.70cm}{%
+        \hspace*{1.0cm}%
+        \includegraphics[
+          height=0.715\textheight
+        ]{../beamer/figures/et_melt_pool_vertical.png}%
+      }
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \centering
+      \includegraphics[
+        width=\linewidth,
+        height=0.82\textheight,
+        keepaspectratio
+      ]{../beamer/figures/TCAM/ET_TC_temp_yz_0_75_150um_inferno.png}
+    \end{column}
+    \begin{column}{0.23\textwidth}
+      \raggedright
+      \raisebox{0.70cm}{%
+        \hspace*{-1.3cm}%
+        \includegraphics[
+          height=0.715\textheight
+        ]{../beamer/figures/tc_melt_pool_vertical.png}%
+      }
+    \end{column}
+  \end{columns}
+  \end{minipage}
+\end{frame}
+
+\begin{frame}{Bayesian Updating}
+  \vspace{-0.65em}
+  \setbeamerfont{block title}{size=\fontsize{18}{22}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{17}{21}\selectfont}
+  \setbeamerfont{block title alerted}{size=\fontsize{18}{22}\selectfont,series=\bfseries}
+  \setbeamerfont{block body alerted}{size=\fontsize{17}{21}\selectfont}
+  \begin{columns}[c,totalwidth=0.92\textwidth]
+    \begin{column}{0.39\textwidth}
+      \centering
+      \begin{minipage}[c][0.225\textheight][c]{\linewidth}
+        \centering
+        {\fontsize{16}{19}\selectfont\bfseries Eagar--Tsai prior\par}
+        \vspace{0.10em}
+        \includegraphics[width=0.94\linewidth,height=0.185\textheight,keepaspectratio]{figures/paraview_ET.png}
+      \end{minipage}
+
+      \vspace{0.18em}
+      {\color{sffblue}\fontsize{25}{28}\selectfont$\downarrow$\par}
+      \vspace{-0.15em}
+
+      \begin{minipage}[c][0.225\textheight][c]{\linewidth}
+        \centering
+        {\fontsize{16}{19}\selectfont\bfseries TCAM ground-truth samples\par}
+        \vspace{0.10em}
+        \includegraphics[width=\linewidth,height=0.195\textheight,keepaspectratio]{figures/bayesian/single_training_case/sampled_points_paraview.png}
+      \end{minipage}
+
+      \vspace{0.18em}
+      {\color{sffblue}\fontsize{25}{28}\selectfont$\downarrow$\par}
+      \vspace{-0.15em}
+
+      \begin{minipage}[c][0.225\textheight][c]{\linewidth}
+        \centering
+        {\fontsize{16}{19}\selectfont\bfseries Bayesian-updated ET\par}
+        \vspace{0.10em}
+        \includegraphics[width=0.94\linewidth,height=0.185\textheight,keepaspectratio]{figures/paraview_corrected.png}
+      \end{minipage}
+    \end{column}
+
+    \begin{column}{0.51\textwidth}
+      {\fontsize{22}{26}\selectfont\centering
+      \textcolor{sffblue}{\textbf{1:1 Training Data Reproduction}}\par}
+      \vspace{0.18em}
+      {\fontsize{20}{24}\selectfont\centering
+      \textbf{Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$}
+      \quad $P=250~\mathrm{W}$
+      \quad $v=0.5~\mathrm{m/s}$\par}
+
+      \vspace{0.38em}
+      \begin{block}{1. ET Prior}
+        Predict the full temperature field rapidly for the selected alloy and
+        process condition.
+
+        \vspace{0.12em}
+        \centering
+        $T_{\mathrm{ET}}(x,y,z)$
+      \end{block}
+
+      \vspace{0.18em}
+      \begin{block}{2. TCAM Ground-Truth}
+        Compare ET and TCAM temperatures at matched spatial points, then train
+        the Gaussian process on their discrepancy.
+
+        \vspace{0.12em}
+        \centering
+        $\Delta T(x,y,z)=
+        T_{\mathrm{TCAM}}(x,y,z)-T_{\mathrm{ET}}(x,y,z)$
+      \end{block}
+
+      \vspace{0.18em}
+      \begin{alertblock}{3. Melt Pool Prediction}
+        Add the learned posterior correction to the ET prior, retaining its
+        inexpensive structure while learning the deeper TCAM geometry.
+
+        \vspace{0.12em}
+        \centering
+        $T_{\mathrm{updated}}(x,y,z)=
+        T_{\mathrm{ET}}(x,y,z)+\mu_{\Delta T}(x,y,z)$
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Single-Case Prediction vs. TCAM Ground Truth}
+  \vspace{-0.70em}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \centering
+      \includegraphics[
+        width=\linewidth,
+        height=0.77\textheight,
+        keepaspectratio
+      ]{figures/bayesian/single_training_case/temperature_comparison_scatter.png}
+    \end{column}
+
+    \begin{column}{0.49\textwidth}
+      \centering
+      {\fontsize{18}{22}\selectfont\bfseries Bayesian-updated ET\par}
+      \vspace{0.08em}
+      \includegraphics[
+        width=\linewidth,
+        height=0.29\textheight,
+        keepaspectratio
+      ]{figures/paraview_corrected.png}
+
+      \vspace{0.35em}
+      {\fontsize{18}{22}\selectfont\bfseries TCAM ground truth\par}
+      \vspace{0.08em}
+      \includegraphics[
+        width=\linewidth,
+        height=0.29\textheight,
+        keepaspectratio
+      ]{figures/paraview_TCAM.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[t]{Bayesian-Updated ET -- Thermal Gradient and Solidification Rate}
+  \vspace{0.00em}
+  {\fontsize{21}{25}\selectfont\centering
+  \textcolor{sffblue}{\textbf{1:1 Reproducing Training Data: Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$,
+  250 W, 0.5 m/s}}\par}
+
+  \vfill
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \centering
+      \begin{minipage}[t][0.68\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[
+          width=\linewidth,
+          height=0.68\textheight,
+          keepaspectratio
+        ]{figures/bayesian/single_training_case/G_projection_TCAM_vs_corrected.png}
+      \end{minipage}
+
+      \vspace{0.12em}
+      {\fontsize{13}{16}\selectfont
+      Thermal gradient $G$ along the liquidus solidification front projected
+      onto a $yz$ slice: TCAM (left) and Bayesian-updated ET (right).\par}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \centering
+      \begin{minipage}[t][0.68\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[
+          width=\linewidth,
+          height=0.68\textheight,
+          keepaspectratio
+        ]{figures/bayesian/single_training_case/R_projection_TCAM_vs_corrected.png}
+      \end{minipage}
+
+      \vspace{0.12em}
+      {\fontsize{13}{16}\selectfont
+      Solidification rate $R$ along the liquidus solidification front projected
+      onto a $yz$ slice: TCAM (left) and Bayesian-updated ET (right).\par}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Bayesian-Updated ET -- Microstructure Prediction}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \centering
+      \begin{minipage}[t][0.65\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[
+          width=\linewidth,
+          height=0.65\textheight,
+          keepaspectratio
+        ]{figures/bayesian/single_training_case/GR_map_overlayET_TCAM_BU_alloy0_250_0.png}
+      \end{minipage}
+
+      \vspace{0.12em}
+      {\fontsize{13}{16}\selectfont
+      Thermo-Calc CET $G$--$R$ map with TCAM, Bayesian-updated ET, and original
+      ET liquidus-boundary conditions for Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$,
+      250 W and 0.5 m/s.\par}
+    \end{column}
+    \begin{column}{0.06\textwidth}
+      \centering
+      \raisebox{0.8cm}{%
+        {\color{black}\fontsize{30}{34}\selectfont$\longrightarrow$}%
+      }
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \centering
+      \begin{minipage}[t][0.65\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[
+          width=\linewidth,
+          height=0.65\textheight,
+          keepaspectratio
+        ]{figures/bayesian/single_training_case/microstructure_TCAM_vs_corrected.png}
+      \end{minipage}
+
+      \vspace{0.12em}
+      {\fontsize{13}{16}\selectfont
+      Microstructure classification along the liquidus solidification front
+      projected onto a $yz$ slice: TCAM (left) and Bayesian-updated ET (right)
+      for the same alloy and process condition.\par}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Warped Multi-Case Gaussian Process}
+  \vspace{-0.55em}
+  \setbeamerfont{block title}{size=\fontsize{18}{22}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{16}{20}\selectfont}
+  \setbeamerfont{block title alerted}{size=\fontsize{20}{24}\selectfont,series=\bfseries}
+  \setbeamerfont{block body alerted}{size=\fontsize{19}{23}\selectfont}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \begin{block}{1. Warp the ET Prior}
+        Learn smooth, process-dependent corrections to ET amplitude, front and
+        rear length, width, depth, and $x$ position. The six warp parameters are
+        predicted from power and velocity.
+      \end{block}
+
+      \vspace{0.22em}
+      \begin{block}{2. Learn the Remaining Residual}
+        Fit the remaining TCAM--warped-ET discrepancy using an anisotropic
+        \textbf{Mat\'ern-5/2 kernel} with one length scale per input and a
+        white-noise term.
+      \end{block}
+
+      \vspace{0.22em}
+      \begin{alertblock}{GPR Inputs}
+        \centering
+        $P,\;v,\;x,\;y,\;z,\;r_{3D},\;T_{\mathrm{warped\ ET}}$
+
+        \vspace{0.18em}
+        {\fontsize{16}{20}\selectfont
+        $r_{3D}=\sqrt{x^2+y^2+z^2}$; all inputs are normalized before fitting.}
+      \end{alertblock}
+
+      \vspace{0.18em}
+      {\fontsize{15}{18}\selectfont\centering
+      15 training cases $\times$ 500 points = 7,500 training points.\par}
+    \end{column}
+
+    \begin{column}{0.52\textwidth}
+      \centering
+      \includegraphics[
+        width=\linewidth,
+        height=0.72\textheight,
+        keepaspectratio
+      ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/case_split.png}
+
+      \vspace{0.12em}
+      {\fontsize{16}{19}\selectfont
+      \textbf{Held out: Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$, 250 W, 0.5 m/s}\par}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Warped ET Prior}
+  \vspace{-0.55em}
+  \setbeamerfont{block title}{size=\fontsize{20}{24}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{18}{22}\selectfont}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.29\textwidth}
+      \begin{block}{Predicted Warp Parameters}
+        \begin{tabular}{@{}l r@{}}
+          Temperature-rise scale & 0.746 \\
+          Rear scale & 0.975 \\
+          Front scale & 0.727 \\
+          Width scale & 0.857 \\
+          Depth scale & 2.872 \\
+          $x$ shift / $\sigma$ & 0.0476 \\
+        \end{tabular}
+      \end{block}
+
+      \vspace{0.35em}
+      {\fontsize{16}{20}\selectfont
+      The warp rescales ET temperature amplitude and melt-pool geometry before
+      the residual GPR correction is applied.\par}
+    \end{column}
+
+    \begin{column}{0.68\textwidth}
+      \centering
+      \href{run:figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/warped_et_prior_animation.mp4}{%
+        \XeTeXLinkBox{%
+          \includegraphics[
+            width=\linewidth,
+            height=0.76\textheight,
+            keepaspectratio
+          ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/warped_et_prior_animation_poster.png}%
+        }%
+      }
+
+      \vspace{0.10em}
+      {\fontsize{14}{17}\selectfont
+      Original ET (left) and predicted warped ET (right), shown from the top
+      and side.\par}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Held-Out Melt Pool Prediction}
+  \vspace{-0.65em}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.40\textwidth}
+      {\fontsize{23}{28}\selectfont\centering
+      \textcolor{sffblue}{\textbf{The 250 W, 0.5 m/s TCAM field is excluded
+      from training and used only after prediction for evaluation.}}\par}
+    \end{column}
+
+    \begin{column}{0.57\textwidth}
+      \begin{columns}[c,totalwidth=\linewidth]
+        \begin{column}{0.31\linewidth}
+          \raggedleft
+          {\fontsize{18}{22}\selectfont\bfseries ET prior\par}
+        \end{column}
+        \begin{column}{0.67\linewidth}
+          \centering
+          \includegraphics[
+            width=\linewidth,
+            height=0.22\textheight,
+            keepaspectratio
+          ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/et_paraview.png}
+        \end{column}
+      \end{columns}
+
+      \vspace{-0.02em}
+      \hspace*{0.64\linewidth}{\color{black}\fontsize{21}{24}\selectfont$\downarrow$}\par
+      \vspace{-0.08em}
+
+      \begin{columns}[c,totalwidth=\linewidth]
+        \begin{column}{0.31\linewidth}
+          \raggedleft
+          {\fontsize{18}{22}\selectfont\bfseries Process-dependent\\warped ET prior\par}
+        \end{column}
+        \begin{column}{0.67\linewidth}
+          \centering
+          \includegraphics[
+            width=\linewidth,
+            height=0.22\textheight,
+            keepaspectratio
+          ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/warped_et_paraview.png}
+        \end{column}
+      \end{columns}
+
+      \vspace{-0.02em}
+      \hspace*{0.64\linewidth}{\color{black}\fontsize{21}{24}\selectfont$\downarrow$}\par
+      \vspace{-0.08em}
+
+      \begin{columns}[c,totalwidth=\linewidth]
+        \begin{column}{0.31\linewidth}
+          \raggedleft
+          {\fontsize{18}{22}\selectfont\bfseries Held-out Bayesian\\prediction\par}
+        \end{column}
+        \begin{column}{0.67\linewidth}
+          \centering
+          \includegraphics[
+            width=\linewidth,
+            height=0.22\textheight,
+            keepaspectratio
+          ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/prediction_paraview.png}
+        \end{column}
+      \end{columns}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Blind Prediction vs. TCAM Ground Truth}
+  \vspace{-0.70em}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \centering
+      \includegraphics[
+        width=\linewidth,
+        height=0.77\textheight,
+        keepaspectratio
+      ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/heldout_parity.png}
+    \end{column}
+
+    \begin{column}{0.49\textwidth}
+      \centering
+      {\fontsize{18}{22}\selectfont\bfseries Blind Bayesian prediction\par}
+      \vspace{0.08em}
+      \includegraphics[
+        width=\linewidth,
+        height=0.29\textheight,
+        keepaspectratio
+      ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/prediction_paraview_no_colorbar.png}
+
+      \vspace{0.35em}
+      {\fontsize{18}{22}\selectfont\bfseries TCAM ground truth\par}
+      \vspace{0.08em}
+      \includegraphics[
+        width=\linewidth,
+        height=0.29\textheight,
+        keepaspectratio
+      ]{figures/paraview_TCAM.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Held-Out Temperature Cross Sections}
+  \vspace{-1.0em}
+  \hspace*{0.25cm}%
+  \begin{minipage}{\textwidth}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.28\textwidth}
+      \raggedleft
+      \raisebox{0.70cm}{%
+        \hspace*{1.0cm}%
+        \includegraphics[
+          height=0.715\textheight
+        ]{figures/paraview_warp.png}%
+      }
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \centering
+      \includegraphics[
+        width=\linewidth,
+        height=0.82\textheight,
+        keepaspectratio
+      ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/Corrected_TCAM_temp_yz_0_75_150um_inferno.png}
+    \end{column}
+    \begin{column}{0.23\textwidth}
+      \raggedright
+      \raisebox{0.70cm}{%
+        \hspace*{-1.3cm}%
+        \includegraphics[
+          height=0.715\textheight
+        ]{figures/paraview_TCAM_full_colorbar.png}%
+      }
+    \end{column}
+  \end{columns}
+  \end{minipage}
+\end{frame}
+
+\begin{frame}[t]{Held-Out Thermal Gradient and Solidification Rate}
+  \vspace{0.00em}
+
+  \vfill
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \centering
+      \begin{minipage}[t][0.68\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[
+          width=\linewidth,
+          height=0.68\textheight,
+          keepaspectratio
+        ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/G_projection_TCAM_vs_corrected.png}
+      \end{minipage}
+
+      \vspace{0.12em}
+      {\fontsize{13}{16}\selectfont
+      Thermal gradient $G$ along the liquidus solidification front projected
+      onto a $yz$ slice: TCAM (left) and held-out Bayesian prediction (right).\par}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \centering
+      \begin{minipage}[t][0.68\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[
+          width=\linewidth,
+          height=0.68\textheight,
+          keepaspectratio
+        ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/R_projection_TCAM_vs_corrected.png}
+      \end{minipage}
+
+      \vspace{0.12em}
+      {\fontsize{13}{16}\selectfont
+      Solidification rate $R$ along the liquidus solidification front projected
+      onto a $yz$ slice: TCAM (left) and held-out Bayesian prediction (right).\par}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Held-Out Microstructure Prediction}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \centering
+      \begin{minipage}[t][0.65\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[
+          width=\linewidth,
+          height=0.65\textheight,
+          keepaspectratio
+        ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/GR_map_overlayET_TCAM_BU_alloy0_250_0.png}
+      \end{minipage}
+
+      \vspace{0.12em}
+      {\fontsize{13}{16}\selectfont
+      Thermo-Calc CET $G$--$R$ map with TCAM, held-out Bayesian prediction,
+      and original ET liquidus-boundary conditions for
+      Hf$_2$Mo$_2$Ta$_{48}$W$_{48}$, 250 W and 0.5 m/s.\par}
+    \end{column}
+    \begin{column}{0.06\textwidth}
+      \centering
+      \raisebox{0.8cm}{%
+        {\color{black}\fontsize{30}{34}\selectfont$\longrightarrow$}%
+      }
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \centering
+      \begin{minipage}[t][0.65\textheight][c]{\linewidth}
+        \centering
+        \includegraphics[
+          width=\linewidth,
+          height=0.65\textheight,
+          keepaspectratio
+        ]{figures/bayesian/multi_warped_gpr/heldout_250W_0.5ms_15cases/microstructure_TCAM_vs_corrected.png}
+      \end{minipage}
+
+      \vspace{0.12em}
+      {\fontsize{13}{16}\selectfont
+      Microstructure classification along the liquidus solidification front
+      projected onto a $yz$ slice: TCAM (left) and held-out Bayesian prediction
+      (right) for the same alloy and process condition.\par}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[t]{Closing}
+  \setbeamerfont{block title}{size=\fontsize{21}{25}\selectfont,series=\bfseries}
+  \setbeamerfont{block body}{size=\fontsize{17}{21}\selectfont}
+  \setbeamerfont{block title alerted}{size=\fontsize{21}{25}\selectfont,series=\bfseries}
+  \setbeamerfont{block body alerted}{size=\fontsize{17}{21}\selectfont}
+  \vspace{0.20cm}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.58\textwidth}
+      \begin{minipage}[t][0.81\textheight][t]{\linewidth}
+      \vspace{0.62cm}
+      \begin{block}{Accomplishments}
+        \begin{itemize}
+          \setlength{\itemsep}{0.62em}
+          \item Created an end-to-end \textbf{ET $\rightarrow$ KGT} workflow for rapid LPBF microstructure prediction.
+          \item Used Bayesian updating to add \textbf{TCAM-informed fidelity} while retaining ET's low computational cost.
+          \item Enabled \textbf{high-throughput process screening} from process parameters through thermal history to morphology.
+        \end{itemize}
+      \end{block}
+
+      \vspace{0.42em}
+      \begin{alertblock}{Future Work}
+        \begin{itemize}
+          \setlength{\itemsep}{0.52em}
+          \item Improve warped-GPR agreement on the $G$--$R$ map.
+          \item Test additional alloy systems.
+          \item Predict the onset of keyholing.
+          \item Extend the workflow to realistic part geometries using transient thermal simulations.
+        \end{itemize}
+      \end{alertblock}
+
+      \vfill
+      {\centering
+      \resizebox{0.96\linewidth}{!}{%
+        \textcolor{sffblue}{\textbf{Same morphology $\neq$ same underlying physics.}}%
+      }\par}
+      \vspace{0.08cm}
+      \end{minipage}
+    \end{column}
+
+    \begin{column}{0.38\textwidth}
+      \centering
+      \vspace{-1.07cm}
+      \begin{minipage}[t][0.88\textheight][t]{\linewidth}
+        \centering
+        \includegraphics[
+          width=\linewidth,
+          height=0.88\textheight,
+          keepaspectratio
+        ]{figures/closing_figure.png}
+      \end{minipage}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\end{document}

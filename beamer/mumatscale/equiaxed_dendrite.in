@@ -1,0 +1,59 @@
+BaseFileName equiaxed
+
+# Higher-resolution thin 3-D slab; render its center plane as the 2-D section.
+NSubblocks 1 1 1
+NCellsPerSB 440 440 3
+FaceCtrl 1 1 1 1 1 1
+CellSize 5.0e-7
+
+# Fuller trunks than the stock muMatScale one_grain.in value of 0.66.
+FSGrow 0.78
+
+# D_l * dt / dx^2 = 0.075, preserving the coarse-grid diffusion number.
+TimeStep 6.25e-6
+RandSeedVal 3823798712
+
+TipCurvature 1
+GibbsThomsonCoef 4.5e-7
+
+FinishTime 0.05
+FsFinish 0.50
+
+# Al-3 wt% Cu-like binary alloy.
+LiquidusTemp 925.7
+SolidusTemp 877.8
+Cinit 3.0
+m_solute0 0 0 -2.6
+part_coef0 0 0 0.14
+Dsol 3.0e-13
+Dliq 3.0e-9
+
+# Uniformly undercooled melt with gentle continued cooling.
+InitialTemperature 923.2
+Gradient 0
+Grad_Coef 0
+Velocity 0
+Velo_Coef 0
+GradSlope 0
+Slope_Coef 0
+Iso_Coef_One 0
+Iso_Coef_Two 0
+Coef_Iso2 0
+CoolingRate 0.03
+
+ScreenPFreq 4000
+DataFormat XDMF
+DataWriteFreq 4000
+checkpointfreq 1000000
+
+# One centered, crystal-aligned nucleus; stochastic nucleation is disabled.
+MaxGrainDensity 0
+GNGaussCentre 50
+GNGaussSigma 0
+MaxGrainDensitySurf 0
+GNGaussCentreSurf 200
+GNGaussSigmaSurf 0
+MaxTotGrains 8
+RandomizeGrains 0
+GNOriented 1
+FixedNuc 1.1e-4 1.1e-4 0.75e-6 0 0 0 0

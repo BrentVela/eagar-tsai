@@ -4,8 +4,11 @@ from pathlib import Path
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 
 from eagar_tsai import (
     BeamParameters,
@@ -17,8 +20,8 @@ from eagar_tsai import (
 
 DEFAULT_EXCEL = "effective_cp_data.xlsx"
 DEFAULT_ROW_INDEX = 2 # EXCEL ROW - 2
-DEFAULT_OUTPUT_VTI = "beamer-template/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.vti"
-DEFAULT_OUTPUT_PNG = "beamer-template/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.png"
+DEFAULT_OUTPUT_VTI = "beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.vti"
+DEFAULT_OUTPUT_PNG = "beamer/figures/250_0.5/ET_3D_temperature_alloy0_250_0.5.png"
 DEFAULT_LIMITS_UM = {
     "x": (-160.0, 380.0),
     "y": (0.0, 200.0),
@@ -104,7 +107,7 @@ def _inputs_to_melt_pool_dataframe(inputs):
 
 
 def _expanded_vti_limits(result, padding_um):
-    """Match workflow.py's melt-pool-based VTI domain expansion."""
+    """Match workflow_ET.py's melt-pool-based VTI domain expansion."""
     row = result.iloc[0]
     melt_length_um = float(row["melt_length_um"])
     melt_width_um = float(row["melt_width_um"])
@@ -162,6 +165,60 @@ def _trim_render_whitespace(fig, padding_px=18, white_threshold=248):
     image.set_extent((0, cropped.shape[1], cropped.shape[0], 0))
     image_ax.set_xlim(0, cropped.shape[1])
     image_ax.set_ylim(cropped.shape[0], 0)
+
+
+def _plot_temperature_volume(volume):
+    """Render the library's 3D view with an inferno temperature scale."""
+    plotter = volume.plot_3d(
+        mirror_y=True,
+        liquidus_contour=True,
+        off_screen=True,
+        return_plotter=True,
+        show_scalar_bar=False,
+    )
+    for actor in plotter.actors.values():
+        mapper = actor.mapper
+        if getattr(mapper, "array_name", None) == "Temperature_K":
+            mapper.lookup_table.apply_cmap("inferno")
+
+    image = plotter.screenshot(return_img=True)
+    plotter.close()
+    if image is None:
+        raise RuntimeError("PyVista did not return a temperature-volume image.")
+
+    figure = plt.figure(figsize=(4.0, 3.2), constrained_layout=False)
+    grid = figure.add_gridspec(
+        2,
+        1,
+        height_ratios=[1.0, 0.085],
+        hspace=0.04,
+    )
+    image_axis = figure.add_subplot(grid[0])
+    colorbar_axis = figure.add_subplot(grid[1])
+    image_axis.imshow(image, aspect="auto")
+    image_axis.axis("off")
+
+    scalar_mappable = ScalarMappable(
+        cmap="inferno",
+        norm=Normalize(vmin=298.0, vmax=float(volume.T_xyz.max())),
+    )
+    scalar_mappable.set_array([])
+    colorbar = figure.colorbar(
+        scalar_mappable,
+        cax=colorbar_axis,
+        orientation="horizontal",
+    )
+    colorbar.ax.tick_params(
+        labelsize=8,
+        length=1.7,
+        width=0.4,
+        pad=0.8,
+    )
+    colorbar.ax.xaxis.set_ticks_position("bottom")
+    colorbar.ax.xaxis.set_label_position("bottom")
+    colorbar.set_label("T (K)", fontsize=8, labelpad=4.0)
+    colorbar.outline.set_linewidth(0.4)
+    return figure
 
 
 def compute_eagar_tsai_volume(
@@ -267,7 +324,7 @@ def export_eagar_tsai_vti(
     if output_png is not None:
         png_path = Path(output_png)
         png_path.parent.mkdir(parents=True, exist_ok=True)
-        fig = volume.plot_3d(mirror_y=True, liquidus_contour=True)
+        fig = _plot_temperature_volume(volume)
         if trim_render_whitespace:
             _trim_render_whitespace(fig, padding_px=int(render_padding_px))
         if colorbar_gap is not None and len(fig.axes) >= 2:
@@ -283,6 +340,7 @@ def export_eagar_tsai_vti(
                 ]
             )
         fig.savefig(png_path, bbox_inches="tight")
+        plt.close(fig)
 
     return vti_path if png_path is None else (vti_path, png_path)
 

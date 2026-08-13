@@ -11,7 +11,21 @@ DEFAULT_VTI = DEFAULT_DATA_DIR / "ET_3D_temperature_alloy0_125_0.2.vti"
 DEFAULT_META = DEFAULT_DATA_DIR / "ET_0000.csv"
 DEFAULT_OUTPUT = DEFAULT_DATA_DIR / "liquidus_GR_alloy0_125_0.2.csv"
 TEMP_NAME = "Temperature_K"
-R_SIGN = -1.0
+DEFAULT_SCAN_DIRECTION_X_SIGN = -1
+
+
+def _scan_direction_x_sign(grid):
+    """Read the VTI scan direction, defaulting to native Eagar--Tsai."""
+    field_name = "scan_direction_x_sign"
+    if field_name not in grid.field_data:
+        return DEFAULT_SCAN_DIRECTION_X_SIGN
+
+    sign = int(np.asarray(grid.field_data[field_name]).flat[0])
+    if sign not in (-1, 1):
+        raise ValueError(
+            f"VTI field data '{field_name}' must be -1 or +1, got {sign}."
+        )
+    return sign
 
 
 def compute_gr_from_vti(
@@ -28,6 +42,7 @@ def compute_gr_from_vti(
     v_scan = float(meta["velocity_m_s"].iloc[0])
 
     grid = pv.read(vti_path)
+    scan_direction_x_sign = _scan_direction_x_sign(grid)
     derived = grid.compute_derivative(scalars=TEMP_NAME, gradient=True, preference="point")
     gradient = np.asarray(derived.point_data["gradient"])
 
@@ -39,7 +54,7 @@ def compute_gr_from_vti(
     derived.point_data["G"] = grad_mag_k_per_um * 1.0e6
 
     normal_x = gradient[:, 0] / grad_mag_k_per_um
-    derived.point_data["R"] = R_SIGN * normal_x * v_scan
+    derived.point_data["R"] = scan_direction_x_sign * normal_x * v_scan
 
     liquidus = derived.contour(isosurfaces=[tl], scalars=TEMP_NAME)
     if liquidus.n_points == 0:

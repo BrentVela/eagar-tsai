@@ -10,6 +10,8 @@ scikit-learn
 scikit-learn-extra
 joblib
 pyvista
+imageio
+imageio-ffmpeg
 
 # Eagar-Tsai solver used by the ET workflow scripts.
 eagar-tsai
